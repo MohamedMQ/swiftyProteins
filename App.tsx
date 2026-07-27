@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { loadLigandCodes } from './src/core/persistence/ligandRepository';
 import { useAppLock } from './src/core/security/useAppLock';
+import { PrivacyOverlay } from './src/features/app-lock/PrivacyOverlay';
 import { AuthFlow } from './src/features/auth/AuthFlow';
 import { LigandListScreen } from './src/features/ligand-list/LigandListScreen';
 import { SplashScreen } from './src/features/splash/SplashScreen';
@@ -45,6 +46,7 @@ export default function App() {
   return (
     <>
       {renderContent()}
+      <PrivacyOverlay />
       <StatusBar style="light" />
     </>
   );
