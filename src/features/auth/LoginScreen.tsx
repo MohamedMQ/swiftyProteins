@@ -15,6 +15,16 @@ export function LoginScreen({ onAuthenticated, onNavigateToSignUp }: LoginScreen
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  function handleUsernameChange(value: string) {
+    setUsername(value);
+    setFormError(null);
+  }
+
+  function handlePasswordChange(value: string) {
+    setPassword(value);
+    setFormError(null);
+  }
+
   async function handleSubmit() {
     setFormError(null);
     setSubmitting(true);
@@ -28,6 +38,8 @@ export function LoginScreen({ onAuthenticated, onNavigateToSignUp }: LoginScreen
     }
   }
 
+  const canSubmit = username.length > 0 && password.length > 0;
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome back</Text>
@@ -37,7 +49,7 @@ export function LoginScreen({ onAuthenticated, onNavigateToSignUp }: LoginScreen
         label="Username"
         placeholder="Enter your username"
         value={username}
-        onChangeText={setUsername}
+        onChangeText={handleUsernameChange}
         autoCapitalize="none"
         autoCorrect={false}
       />
@@ -46,14 +58,19 @@ export function LoginScreen({ onAuthenticated, onNavigateToSignUp }: LoginScreen
         label="Password"
         placeholder="Enter your password"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={handlePasswordChange}
         secureTextEntry
         autoCapitalize="none"
       />
 
       {formError !== null && <Text style={styles.error}>{formError}</Text>}
 
-      <PrimaryButton label="Log in" onPress={handleSubmit} loading={submitting} />
+      <PrimaryButton
+        label="Log in"
+        onPress={handleSubmit}
+        loading={submitting}
+        disabled={!canSubmit}
+      />
 
       <View style={styles.footer}>
         <Pressable onPress={onNavigateToSignUp} hitSlop={8}>

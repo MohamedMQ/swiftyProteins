@@ -17,9 +17,11 @@ export function SignUpScreen({ onRegistered, onNavigateToLogin }: SignUpScreenPr
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [usernameTouched, setUsernameTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const usernameErrors = useMemo(() => validateUsername(username), [username]);
   const passwordErrors = useMemo(() => validatePassword(password), [password]);
   const passedRuleCount = PASSWORD_RULE_COUNT - passwordErrors.length;
   const strengthLabel =
@@ -30,21 +32,31 @@ export function SignUpScreen({ onRegistered, onNavigateToLogin }: SignUpScreenPr
         : passedRuleCount === 0
           ? 'Weak'
           : 'Fair';
+  const confirmError =
+    confirmPassword.length > 0 && confirmPassword !== password
+      ? 'Passwords do not match'
+      : undefined;
+
+  function handleUsernameChange(value: string) {
+    setUsername(value);
+    setFormError(null);
+  }
+
+  function handlePasswordChange(value: string) {
+    setPassword(value);
+    setFormError(null);
+  }
+
+  function handleConfirmPasswordChange(value: string) {
+    setConfirmPassword(value);
+    setFormError(null);
+  }
 
   async function handleSubmit() {
+    setUsernameTouched(true);
     setFormError(null);
 
-    const usernameErrors = validateUsername(username);
-    if (usernameErrors.length > 0) {
-      setFormError(usernameErrors[0]);
-      return;
-    }
-    if (passwordErrors.length > 0) {
-      setFormError(passwordErrors[0]);
-      return;
-    }
-    if (password !== confirmPassword) {
-      setFormError('Passwords do not match');
+    if (usernameErrors.length > 0 || passwordErrors.length > 0 || confirmError !== undefined) {
       return;
     }
 
@@ -58,6 +70,8 @@ export function SignUpScreen({ onRegistered, onNavigateToLogin }: SignUpScreenPr
       setFormError(result.reasons[0]);
     }
   }
+
+  const canSubmit = username.length > 0 && password.length > 0 && confirmPassword.length > 0;
 
   return (
     <ScrollView
@@ -76,7 +90,9 @@ export function SignUpScreen({ onRegistered, onNavigateToLogin }: SignUpScreenPr
         label="Username"
         placeholder="Choose a username"
         value={username}
-        onChangeText={setUsername}
+        onChangeText={handleUsernameChange}
+        onBlur={() => setUsernameTouched(true)}
+        errorText={usernameTouched ? usernameErrors[0] : undefined}
         autoCapitalize="none"
         autoCorrect={false}
       />
@@ -85,7 +101,7 @@ export function SignUpScreen({ onRegistered, onNavigateToLogin }: SignUpScreenPr
         label="Password"
         placeholder="Choose a password"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={handlePasswordChange}
         secureTextEntry
         autoCapitalize="none"
       />
@@ -111,14 +127,20 @@ export function SignUpScreen({ onRegistered, onNavigateToLogin }: SignUpScreenPr
         label="Confirm password"
         placeholder="Re-enter your password"
         value={confirmPassword}
-        onChangeText={setConfirmPassword}
+        onChangeText={handleConfirmPasswordChange}
+        errorText={confirmError}
         secureTextEntry
         autoCapitalize="none"
       />
 
       {formError !== null && <Text style={styles.error}>{formError}</Text>}
 
-      <PrimaryButton label="Create account" onPress={handleSubmit} loading={submitting} />
+      <PrimaryButton
+        label="Create account"
+        onPress={handleSubmit}
+        loading={submitting}
+        disabled={!canSubmit}
+      />
     </ScrollView>
   );
 }
