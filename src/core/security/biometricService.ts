@@ -20,6 +20,16 @@ export function isBiometricLoginAvailable(capability: BiometricCapability): bool
   return capability.hasHardware && capability.isEnrolled;
 }
 
+export function getBiometricButtonLabel(types: LocalAuthentication.AuthenticationType[]): string {
+  if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+    return 'Use Face ID';
+  }
+  if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+    return 'Use fingerprint';
+  }
+  return 'Use biometrics';
+}
+
 /**
  * disableDeviceFallback/fallbackLabel keep the OS from offering its own
  * "enter device passcode" path: the app already has its own password form

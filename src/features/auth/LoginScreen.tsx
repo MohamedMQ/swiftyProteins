@@ -1,7 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { loginUser } from '../../core/auth/authService';
+import { getLastAuthenticatedUsername, loginUser, loginWithBiometrics } from '../../core/auth/authService';
+import { mapBiometricError } from '../../core/security/biometricErrorMessages';
+import {
+  authenticateWithBiometrics,
+  getBiometricButtonLabel,
+  getBiometricCapability,
+  isBiometricLoginAvailable,
+} from '../../core/security/biometricService';
 import { PrimaryButton, TextField, theme } from '../../design-system';
 
 interface LoginScreenProps {
@@ -14,6 +21,20 @@ export function LoginScreen({ onAuthenticated, onNavigateToSignUp }: LoginScreen
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [biometricLabel, setBiometricLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const [capability, lastUsername] = await Promise.all([
+        getBiometricCapability(),
+        getLastAuthenticatedUsername(),
+      ]);
+
+      if (isBiometricLoginAvailable(capability) && lastUsername !== null) {
+        setBiometricLabel(getBiometricButtonLabel(capability.types));
+      }
+    })();
+  }, []);
 
   function handleUsernameChange(value: string) {
     setUsername(value);
@@ -31,6 +52,26 @@ export function LoginScreen({ onAuthenticated, onNavigateToSignUp }: LoginScreen
     const result = await loginUser(username, password);
     setSubmitting(false);
 
+    if (result.success) {
+      onAuthenticated(result.username);
+    } else {
+      setFormError(result.reasons[0]);
+    }
+  }
+
+  async function handleBiometricLogin() {
+    setFormError(null);
+    const scan = await authenticateWithBiometrics();
+
+    if (!scan.success) {
+      const message = mapBiometricError(scan.error);
+      if (message !== null) {
+        setFormError(message);
+      }
+      return;
+    }
+
+    const result = await loginWithBiometrics();
     if (result.success) {
       onAuthenticated(result.username);
     } else {
@@ -72,6 +113,20 @@ export function LoginScreen({ onAuthenticated, onNavigateToSignUp }: LoginScreen
         disabled={!canSubmit}
       />
 
+      {biometricLabel !== null && (
+        <>
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <Pressable style={styles.biometricButton} onPress={handleBiometricLogin}>
+            <Text style={styles.biometricLabel}>{biometricLabel}</Text>
+          </Pressable>
+        </>
+      )}
+
       <View style={styles.footer}>
         <Pressable onPress={onNavigateToSignUp} hitSlop={8}>
           <Text style={styles.link}>Create an account</Text>
@@ -103,6 +158,32 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.caption,
     color: theme.colors.danger,
     marginBottom: theme.spacing.sm,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginVertical: theme.spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.border,
+  },
+  dividerText: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.textQuaternary,
+  },
+  biometricButton: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.borderStrong,
+    borderRadius: theme.radius.sm,
+    paddingVertical: theme.spacing.sm + 1,
+    alignItems: 'center',
+  },
+  biometricLabel: {
+    fontSize: theme.fontSize.body,
+    color: theme.colors.textSecondary,
   },
   footer: {
     alignItems: 'center',
