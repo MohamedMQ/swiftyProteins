@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 
 import { loadLigandCodes } from './src/core/persistence/ligandRepository';
+import { AuthFlow } from './src/features/auth/AuthFlow';
 import { LigandListScreen } from './src/features/ligand-list/LigandListScreen';
 import { SplashScreen } from './src/features/splash/SplashScreen';
 
@@ -13,6 +14,7 @@ ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
 export default function App() {
   const [ligandCodes, setLigandCodes] = useState<string[] | null>(null);
   const [minDurationElapsed, setMinDurationElapsed] = useState(false);
+  const [authenticatedUsername, setAuthenticatedUsername] = useState<string | null>(null);
 
   useEffect(() => {
     ExpoSplashScreen.hideAsync().catch(() => {});
@@ -29,9 +31,19 @@ export default function App() {
 
   const ready = ligandCodes !== null && minDurationElapsed;
 
+  function renderContent() {
+    if (!ready) {
+      return <SplashScreen />;
+    }
+    if (authenticatedUsername === null) {
+      return <AuthFlow onAuthenticated={setAuthenticatedUsername} />;
+    }
+    return <LigandListScreen codes={ligandCodes ?? []} />;
+  }
+
   return (
     <>
-      {ready ? <LigandListScreen codes={ligandCodes ?? []} /> : <SplashScreen />}
+      {renderContent()}
       <StatusBar style="light" />
     </>
   );
