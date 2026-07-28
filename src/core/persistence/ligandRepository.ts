@@ -20,6 +20,15 @@ export function parseLigandCodes(raw: string): string[] {
   return Array.from(codes).sort((a, b) => a.localeCompare(b));
 }
 
+export function filterLigandCodes(codes: string[], query: string): string[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (normalizedQuery.length === 0) {
+    return codes;
+  }
+
+  return codes.filter((code) => code.toLowerCase().includes(normalizedQuery));
+}
+
 export async function loadLigandCodes(): Promise<string[]> {
   const asset = Asset.fromModule(ligandsListAsset);
   await asset.downloadAsync();

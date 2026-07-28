@@ -1,5 +1,7 @@
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { filterLigandCodes } from '../../core/persistence/ligandRepository';
 import { theme } from '../../design-system';
 import { LigandRow } from './LigandRow';
 
@@ -9,11 +11,28 @@ interface LigandListScreenProps {
 }
 
 export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProps) {
+  const [query, setQuery] = useState('');
+  const filteredCodes = useMemo(() => filterLigandCodes(codes, query), [codes, query]);
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Ligands</Text>
+
+      <View style={styles.searchBar}>
+        <Text style={styles.searchIcon}>⌕</Text>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder={`Search ${codes.length.toLocaleString()} ligands`}
+          placeholderTextColor={theme.colors.textTertiary}
+          style={styles.searchInput}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
+
       <FlatList
-        data={codes}
+        data={filteredCodes}
         keyExtractor={(code) => code}
         renderItem={({ item }) => (
           <LigandRow code={item} onPress={onSelectLigand ? () => onSelectLigand(item) : undefined} />
@@ -35,5 +54,28 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.sm,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: theme.spacing.md - 2,
+    paddingVertical: theme.spacing.sm - 2,
+  },
+  searchIcon: {
+    fontSize: theme.fontSize.body,
+    color: theme.colors.textTertiary,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: theme.fontSize.body,
+    color: theme.colors.textPrimary,
+    padding: 0,
   },
 });
