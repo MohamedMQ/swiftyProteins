@@ -1,12 +1,20 @@
-import { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, ListRenderItemInfo, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useDebouncedValue } from '../../core/hooks/useDebouncedValue';
 import { filterLigandCodes } from '../../core/persistence/ligandRepository';
 import { theme } from '../../design-system';
-import { LigandRow } from './LigandRow';
+import { LIGAND_ROW_HEIGHT, LigandRow } from './LigandRow';
 
 const SEARCH_DEBOUNCE_MS = 150;
+
+function keyExtractor(code: string): string {
+  return code;
+}
+
+function getItemLayout(_: ArrayLike<string> | null | undefined, index: number) {
+  return { length: LIGAND_ROW_HEIGHT, offset: LIGAND_ROW_HEIGHT * index, index };
+}
 
 interface LigandListScreenProps {
   codes: string[];
@@ -21,6 +29,11 @@ export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProp
     [codes, debouncedQuery]
   );
   const trimmedQuery = debouncedQuery.trim();
+
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<string>) => <LigandRow code={item} onPress={onSelectLigand} />,
+    [onSelectLigand]
+  );
 
   return (
     <View style={styles.container}>
@@ -47,10 +60,13 @@ export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProp
 
       <FlatList
         data={filteredCodes}
-        keyExtractor={(code) => code}
-        renderItem={({ item }) => (
-          <LigandRow code={item} onPress={onSelectLigand ? () => onSelectLigand(item) : undefined} />
-        )}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        getItemLayout={getItemLayout}
+        initialNumToRender={16}
+        maxToRenderPerBatch={16}
+        windowSize={10}
+        removeClippedSubviews
         contentContainerStyle={filteredCodes.length === 0 ? styles.emptyContainer : undefined}
         ListEmptyComponent={
           <View style={styles.emptyState} accessible accessibilityRole="text">

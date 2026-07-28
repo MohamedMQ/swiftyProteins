@@ -5,15 +5,23 @@ import { getAvatarColor, theme } from '../../design-system';
 
 interface LigandRowProps {
   code: string;
-  onPress?: () => void;
+  onPress?: (code: string) => void;
 }
+
+const AVATAR_SIZE = 32;
+
+// Single source of truth for the row's fixed height, so FlatList's
+// getItemLayout (scroll perf) can never drift out of sync with the actual
+// rendered row.
+export const LIGAND_ROW_HEIGHT =
+  AVATAR_SIZE + theme.spacing.sm * 2 + StyleSheet.hairlineWidth;
 
 function LigandRowComponent({ code, onPress }: LigandRowProps) {
   const avatar = getAvatarColor(code);
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={onPress ? () => onPress(code) : undefined}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
       accessibilityRole="button"
       accessibilityLabel={`Ligand ${code}`}
@@ -47,8 +55,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   avatar: {
-    width: 32,
-    height: 32,
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
     borderRadius: theme.radius.sm - 1,
     alignItems: 'center',
     justifyContent: 'center',
