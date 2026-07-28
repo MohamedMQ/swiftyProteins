@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useDebouncedValue } from '../../core/hooks/useDebouncedValue';
 import { filterLigandCodes } from '../../core/persistence/ligandRepository';
 import { theme } from '../../design-system';
 import { LigandRow } from './LigandRow';
+
+const SEARCH_DEBOUNCE_MS = 150;
 
 interface LigandListScreenProps {
   codes: string[];
@@ -12,7 +15,11 @@ interface LigandListScreenProps {
 
 export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProps) {
   const [query, setQuery] = useState('');
-  const filteredCodes = useMemo(() => filterLigandCodes(codes, query), [codes, query]);
+  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
+  const filteredCodes = useMemo(
+    () => filterLigandCodes(codes, debouncedQuery),
+    [codes, debouncedQuery]
+  );
 
   return (
     <View style={styles.container}>
