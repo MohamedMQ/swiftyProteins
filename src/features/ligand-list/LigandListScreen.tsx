@@ -20,6 +20,7 @@ export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProp
     () => filterLigandCodes(codes, debouncedQuery),
     [codes, debouncedQuery]
   );
+  const trimmedQuery = debouncedQuery.trim();
 
   return (
     <View style={styles.container}>
@@ -44,6 +45,17 @@ export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProp
         renderItem={({ item }) => (
           <LigandRow code={item} onPress={onSelectLigand ? () => onSelectLigand(item) : undefined} />
         )}
+        contentContainerStyle={filteredCodes.length === 0 ? styles.emptyContainer : undefined}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>
+              {trimmedQuery.length > 0 ? `No ligands match "${trimmedQuery}"` : 'No ligands available'}
+            </Text>
+            {trimmedQuery.length > 0 && (
+              <Text style={styles.emptySubtitle}>Try a different search term.</Text>
+            )}
+          </View>
+        }
       />
     </View>
   );
@@ -84,5 +96,25 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.body,
     color: theme.colors.textPrimary,
     padding: 0,
+  },
+  emptyContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.xxl,
+  },
+  emptyTitle: {
+    fontSize: theme.fontSize.body,
+    fontWeight: theme.fontWeight.medium,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.textQuaternary,
+    marginTop: theme.spacing.xs,
+    textAlign: 'center',
   },
 });
