@@ -1,12 +1,14 @@
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '../../design-system';
+import { LigandRow } from './LigandRow';
 
 interface LigandListScreenProps {
   codes: string[];
+  onSelectLigand?: (code: string) => void;
 }
 
-export function LigandListScreen({ codes }: LigandListScreenProps) {
+export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Ligands</Text>
@@ -14,9 +16,7 @@ export function LigandListScreen({ codes }: LigandListScreenProps) {
         data={codes}
         keyExtractor={(code) => code}
         renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Text style={styles.code}>{item}</Text>
-          </View>
+          <LigandRow code={item} onPress={onSelectLigand ? () => onSelectLigand(item) : undefined} />
         )}
       />
     </View>
@@ -35,15 +35,5 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.sm,
-  },
-  row: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.divider,
-  },
-  code: {
-    fontSize: theme.fontSize.body,
-    color: theme.colors.textPrimary,
   },
 });
