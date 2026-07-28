@@ -24,10 +24,14 @@ export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProp
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Ligands</Text>
+      <Text style={styles.header} accessibilityRole="header">
+        Ligands
+      </Text>
 
       <View style={styles.searchBar}>
-        <Text style={styles.searchIcon}>⌕</Text>
+        <Text style={styles.searchIcon} importantForAccessibility="no">
+          ⌕
+        </Text>
         <TextInput
           value={query}
           onChangeText={setQuery}
@@ -36,6 +40,8 @@ export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProp
           style={styles.searchInput}
           autoCapitalize="none"
           autoCorrect={false}
+          accessibilityLabel="Search ligands"
+          accessibilityHint="Filters the ligand list as you type"
         />
       </View>
 
@@ -47,7 +53,7 @@ export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProp
         )}
         contentContainerStyle={filteredCodes.length === 0 ? styles.emptyContainer : undefined}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
+          <View style={styles.emptyState} accessible accessibilityRole="text">
             <Text style={styles.emptyTitle}>
               {trimmedQuery.length > 0 ? `No ligands match "${trimmedQuery}"` : 'No ligands available'}
             </Text>

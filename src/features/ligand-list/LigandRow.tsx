@@ -18,7 +18,10 @@ function LigandRowComponent({ code, onPress }: LigandRowProps) {
       accessibilityRole="button"
       accessibilityLabel={`Ligand ${code}`}
     >
-      <View style={[styles.avatar, { backgroundColor: avatar.background }]}>
+      <View
+        style={[styles.avatar, { backgroundColor: avatar.background }]}
+        importantForAccessibility="no-hide-descendants"
+      >
         <Text style={[styles.avatarText, { color: avatar.foreground }]}>
           {code.slice(0, 2).toUpperCase()}
         </Text>
