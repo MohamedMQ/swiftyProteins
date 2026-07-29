@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   ListRenderItemInfo,
   StyleSheet,
@@ -12,10 +11,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useDebouncedValue } from '../../core/hooks/useDebouncedValue';
-import { getLigandFetchErrorMessage } from '../../core/networking/ligandFetchError';
+import {
+  getLigandFetchErrorIcon,
+  getLigandFetchErrorMessage,
+  getLigandFetchErrorTitle,
+  type LigandFetchError,
+} from '../../core/networking/ligandFetchError';
 import { fetchLigandCif } from '../../core/networking/ligandService';
 import { filterLigandCodes } from '../../core/persistence/ligandRepository';
-import { theme } from '../../design-system';
+import { AlertCard, theme } from '../../design-system';
 import { LIGAND_ROW_HEIGHT, LigandRow } from './LigandRow';
 
 const SEARCH_DEBOUNCE_MS = 150;
@@ -36,6 +40,9 @@ interface LigandListScreenProps {
 export function LigandListScreen({ codes, onLigandLoaded }: LigandListScreenProps) {
   const [query, setQuery] = useState('');
   const [loadingCode, setLoadingCode] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<{ code: string; error: LigandFetchError } | null>(
+    null
+  );
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
   const filteredCodes = useMemo(
     () => filterLigandCodes(codes, debouncedQuery),
@@ -49,6 +56,7 @@ export function LigandListScreen({ codes, onLigandLoaded }: LigandListScreenProp
         return;
       }
 
+      setFetchError(null);
       setLoadingCode(code);
       const result = await fetchLigandCif(code);
       setLoadingCode(null);
@@ -56,7 +64,7 @@ export function LigandListScreen({ codes, onLigandLoaded }: LigandListScreenProp
       if (result.success) {
         onLigandLoaded(code, result.raw);
       } else {
-        Alert.alert(`Couldn't load ${code}`, getLigandFetchErrorMessage(result.error));
+        setFetchError({ code, error: result.error });
       }
     },
     [loadingCode, onLigandLoaded]
@@ -123,6 +131,20 @@ export function LigandListScreen({ codes, onLigandLoaded }: LigandListScreenProp
             <Text style={styles.loadingTitle}>Fetching {loadingCode}.cif</Text>
             <Text style={styles.loadingSubtitle}>files.rcsb.org</Text>
           </View>
+        )}
+
+        {fetchError !== null && (
+          <AlertCard
+            iconName={getLigandFetchErrorIcon(fetchError.error)}
+            title={getLigandFetchErrorTitle(fetchError.error)}
+            message={getLigandFetchErrorMessage(fetchError.error)}
+            onDismiss={() => setFetchError(null)}
+            onRetry={() => {
+              const code = fetchError.code;
+              setFetchError(null);
+              handleSelectLigand(code);
+            }}
+          />
         )}
       </View>
     </SafeAreaView>
