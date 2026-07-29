@@ -1,4 +1,5 @@
 import type { LigandFetchError } from './ligandFetchError';
+import { isOffline } from './reachability';
 import { fetchLigandCifResponse, LigandRequestTimeoutError } from './rcsbClient';
 
 export type LigandFetchResult =
@@ -18,6 +19,10 @@ export async function fetchLigandCif(
   code: string,
   signal?: AbortSignal
 ): Promise<LigandFetchResult> {
+  if (await isOffline()) {
+    return { success: false, error: { type: 'noConnection' } };
+  }
+
   let response: Response;
 
   try {
