@@ -30,8 +30,9 @@ export function PrimaryButton({ label, onPress, disabled, loading }: PrimaryButt
 const styles = StyleSheet.create({
   button: {
     backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius.sm,
-    paddingVertical: theme.spacing.sm + 2,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing.md,
+    marginTop: theme.spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -40,7 +41,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: theme.fontSize.body,
-    fontWeight: theme.fontWeight.medium,
+    fontWeight: theme.fontWeight.bold,
     color: theme.colors.onAccent,
   },
 });

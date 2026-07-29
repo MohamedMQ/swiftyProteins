@@ -1,4 +1,5 @@
 import * as LocalAuthentication from 'expo-local-authentication';
+import { Platform } from 'react-native';
 
 export interface BiometricCapability {
   hasHardware: boolean;
@@ -20,12 +21,26 @@ export function isBiometricLoginAvailable(capability: BiometricCapability): bool
   return capability.hasHardware && capability.isEnrolled;
 }
 
+/**
+ * supportedAuthenticationTypesAsync() reports hardware *capability*, not
+ * which modality is actually enrolled — plenty of Android devices report
+ * both fingerprint and facial recognition as supported even when only a
+ * fingerprint is set up. Fingerprint is checked first since it's the far
+ * more common actually-enrolled modality on Android; devices with only
+ * Face ID (e.g. modern iPhones, which have no fingerprint sensor at all)
+ * still fall through to it correctly.
+ */
 export function getBiometricButtonLabel(types: LocalAuthentication.AuthenticationType[]): string {
-  if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-    return 'Use Face ID';
-  }
+  const isIOS = Platform.OS === 'ios';
+
   if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-    return 'Use fingerprint';
+    return isIOS ? 'Use Touch ID' : 'Use fingerprint';
+  }
+  if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+    return isIOS ? 'Use Face ID' : 'Use face unlock';
+  }
+  if (types.includes(LocalAuthentication.AuthenticationType.IRIS)) {
+    return 'Use iris scan';
   }
   return 'Use biometrics';
 }

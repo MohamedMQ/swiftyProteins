@@ -23,20 +23,21 @@ export function TextField({ label, errorText, style, ...inputProps }: TextFieldP
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
   label: {
     fontSize: theme.fontSize.caption,
+    fontWeight: theme.fontWeight.medium,
     color: theme.colors.textTertiary,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.xs + 1,
   },
   input: {
     backgroundColor: theme.colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
-    paddingHorizontal: theme.spacing.md - 2,
-    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm + 4,
     fontSize: theme.fontSize.body,
     color: theme.colors.textPrimary,
   },

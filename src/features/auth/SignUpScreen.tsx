@@ -1,5 +1,7 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { registerUser } from '../../core/auth/authService';
 import { validatePassword, validateUsername } from '../../core/auth/validation';
@@ -74,74 +76,88 @@ export function SignUpScreen({ onRegistered, onNavigateToLogin }: SignUpScreenPr
   const canSubmit = username.length > 0 && password.length > 0 && confirmPassword.length > 0;
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Pressable onPress={onNavigateToLogin} hitSlop={8}>
-        <Text style={styles.back}>‹ Back</Text>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <Pressable
+        onPress={onNavigateToLogin}
+        hitSlop={8}
+        style={styles.back}
+        accessibilityRole="button"
+        accessibilityLabel="Back to login"
+      >
+        <Ionicons name="chevron-back" size={24} color={theme.colors.textSecondary} />
       </Pressable>
 
-      <Text style={styles.title}>Create account</Text>
-      <Text style={styles.subtitle}>Stored securely on your device</Text>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Image
+          source={require('../../../assets/splash-icon.png')}
+          style={styles.mark}
+          resizeMode="contain"
+        />
 
-      <TextField
-        label="Username"
-        placeholder="Choose a username"
-        value={username}
-        onChangeText={handleUsernameChange}
-        onBlur={() => setUsernameTouched(true)}
-        errorText={usernameTouched ? usernameErrors[0] : undefined}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
+        <Text style={styles.title}>Create account</Text>
+        <Text style={styles.subtitle}>Stored securely on your device</Text>
 
-      <TextField
-        label="Password"
-        placeholder="Choose a password"
-        value={password}
-        onChangeText={handlePasswordChange}
-        secureTextEntry
-        autoCapitalize="none"
-      />
+        <TextField
+          label="Username"
+          placeholder="Choose a username"
+          value={username}
+          onChangeText={handleUsernameChange}
+          onBlur={() => setUsernameTouched(true)}
+          errorText={usernameTouched ? usernameErrors[0] : undefined}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
 
-      {password.length > 0 && (
-        <View style={styles.strength}>
-          <View style={styles.strengthBars}>
-            {Array.from({ length: PASSWORD_RULE_COUNT }).map((_, index) => (
-              <View
-                key={index}
-                style={[styles.strengthBar, index < passedRuleCount && styles.strengthBarFilled]}
-              />
-            ))}
+        <TextField
+          label="Password"
+          placeholder="Choose a password"
+          value={password}
+          onChangeText={handlePasswordChange}
+          secureTextEntry
+          autoCapitalize="none"
+        />
+
+        {password.length > 0 && (
+          <View style={styles.strength}>
+            <View style={styles.strengthBars}>
+              {Array.from({ length: PASSWORD_RULE_COUNT }).map((_, index) => (
+                <View
+                  key={index}
+                  style={[styles.strengthBar, index < passedRuleCount && styles.strengthBarFilled]}
+                />
+              ))}
+            </View>
+            <Text style={styles.strengthLabel}>
+              {strengthLabel}
+              {passwordErrors.length > 0 ? ` — ${passwordErrors.join(', ')}` : ''}
+            </Text>
           </View>
-          <Text style={styles.strengthLabel}>
-            {strengthLabel}
-            {passwordErrors.length > 0 ? ` — ${passwordErrors.join(', ')}` : ''}
-          </Text>
-        </View>
-      )}
+        )}
 
-      <TextField
-        label="Confirm password"
-        placeholder="Re-enter your password"
-        value={confirmPassword}
-        onChangeText={handleConfirmPasswordChange}
-        errorText={confirmError}
-        secureTextEntry
-        autoCapitalize="none"
-      />
+        <TextField
+          label="Confirm password"
+          placeholder="Re-enter your password"
+          value={confirmPassword}
+          onChangeText={handleConfirmPasswordChange}
+          errorText={confirmError}
+          secureTextEntry
+          autoCapitalize="none"
+        />
 
-      {formError !== null && <Text style={styles.error}>{formError}</Text>}
+        {formError !== null && <Text style={styles.error}>{formError}</Text>}
 
-      <PrimaryButton
-        label="Create account"
-        onPress={handleSubmit}
-        loading={submitting}
-        disabled={!canSubmit}
-      />
-    </ScrollView>
+        <PrimaryButton
+          label="Create account"
+          onPress={handleSubmit}
+          loading={submitting}
+          disabled={!canSubmit}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -150,29 +166,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  content: {
-    padding: theme.spacing.lg,
-    paddingTop: theme.spacing.xxl,
-  },
   back: {
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.textTertiary,
-    marginBottom: theme.spacing.lg,
+    alignSelf: 'flex-start',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
+  },
+  content: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
+  },
+  mark: {
+    width: 48,
+    height: 48,
+    alignSelf: 'center',
+    marginBottom: theme.spacing.md,
   },
   title: {
-    fontSize: theme.fontSize.title,
-    fontWeight: theme.fontWeight.medium,
+    fontSize: theme.fontSize.heading,
+    fontWeight: theme.fontWeight.bold,
     color: theme.colors.textPrimary,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: theme.fontSize.caption,
+    fontSize: theme.fontSize.subtitle,
     color: theme.colors.textQuaternary,
     marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+    textAlign: 'center',
   },
   strength: {
     marginTop: -theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
   strengthBars: {
     flexDirection: 'row',
@@ -196,5 +222,6 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.caption,
     color: theme.colors.danger,
     marginBottom: theme.spacing.sm,
+    textAlign: 'center',
   },
 });

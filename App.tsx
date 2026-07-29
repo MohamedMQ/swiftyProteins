@@ -1,6 +1,7 @@
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { loadLigandCodes } from './src/core/persistence/ligandRepository';
 import { useAppLock } from './src/core/security/useAppLock';
@@ -44,10 +45,10 @@ export default function App() {
   }
 
   return (
-    <>
+    <SafeAreaProvider>
       {renderContent()}
       <PrivacyOverlay />
       <StatusBar style="light" />
-    </>
+    </SafeAreaProvider>
   );
 }

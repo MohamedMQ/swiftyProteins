@@ -67,12 +67,12 @@ const styles = StyleSheet.create({
   title: {
     marginTop: theme.spacing.lg,
     fontSize: theme.fontSize.display,
-    fontWeight: theme.fontWeight.medium,
+    fontWeight: theme.fontWeight.bold,
     color: theme.colors.textPrimary,
   },
   subtitle: {
     marginTop: theme.spacing.xs,
-    fontSize: theme.fontSize.caption,
+    fontSize: theme.fontSize.subtitle,
     color: theme.colors.textQuaternary,
   },
   dots: {

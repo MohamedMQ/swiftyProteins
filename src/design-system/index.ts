@@ -1,5 +1,6 @@
 export * from './avatarPalette';
 export * from './colors';
+export * from './moleculeGlyph';
 export * from './radius';
 export * from './spacing';
 export * from './typography';

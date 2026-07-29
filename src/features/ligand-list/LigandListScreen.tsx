@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, ListRenderItemInfo, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useDebouncedValue } from '../../core/hooks/useDebouncedValue';
 import { filterLigandCodes } from '../../core/persistence/ligandRepository';
@@ -36,7 +37,7 @@ export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProp
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Text style={styles.header} accessibilityRole="header">
         Ligands
       </Text>
@@ -79,7 +80,7 @@ export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProp
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -87,27 +88,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    paddingTop: theme.spacing.xxl,
+    paddingTop: theme.spacing.lg,
   },
   header: {
-    fontSize: theme.fontSize.title,
-    fontWeight: theme.fontWeight.medium,
+    fontSize: theme.fontSize.heading,
+    fontWeight: theme.fontWeight.bold,
     color: theme.colors.textPrimary,
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: theme.spacing.md,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
+    gap: theme.spacing.sm,
+    marginHorizontal: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
-    paddingHorizontal: theme.spacing.md - 2,
-    paddingVertical: theme.spacing.sm - 2,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm + 2,
   },
   searchIcon: {
     fontSize: theme.fontSize.body,

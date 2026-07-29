@@ -1,23 +1,24 @@
-import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo, useMemo } from 'react';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { Circle, Line, Svg } from 'react-native-svg';
 
-import { getAvatarColor, theme } from '../../design-system';
+import { getMoleculeGlyph, MOLECULE_GLYPH_BOND_COLOR, theme } from '../../design-system';
 
 interface LigandRowProps {
   code: string;
   onPress?: (code: string) => void;
 }
 
-const AVATAR_SIZE = 32;
+const AVATAR_SIZE = 36;
 
 // Single source of truth for the row's fixed height, so FlatList's
 // getItemLayout (scroll perf) can never drift out of sync with the actual
 // rendered row.
 export const LIGAND_ROW_HEIGHT =
-  AVATAR_SIZE + theme.spacing.sm * 2 + StyleSheet.hairlineWidth;
+  AVATAR_SIZE + theme.spacing.md * 2 + StyleSheet.hairlineWidth;
 
 function LigandRowComponent({ code, onPress }: LigandRowProps) {
-  const avatar = getAvatarColor(code);
+  const glyph = useMemo(() => getMoleculeGlyph(code), [code]);
 
   return (
     <Pressable
@@ -26,14 +27,24 @@ function LigandRowComponent({ code, onPress }: LigandRowProps) {
       accessibilityRole="button"
       accessibilityLabel={`Ligand ${code}`}
     >
-      <View
-        style={[styles.avatar, { backgroundColor: avatar.background }]}
-        importantForAccessibility="no-hide-descendants"
-      >
-        <Text style={[styles.avatarText, { color: avatar.foreground }]}>
-          {code.slice(0, 2).toUpperCase()}
-        </Text>
-      </View>
+      <Svg width={glyph.size} height={glyph.size} importantForAccessibility="no-hide-descendants">
+        {glyph.bonds.map((bond, index) => (
+          <Line
+            key={index}
+            x1={bond.x1}
+            y1={bond.y1}
+            x2={bond.x2}
+            y2={bond.y2}
+            stroke={MOLECULE_GLYPH_BOND_COLOR}
+            strokeWidth={2}
+            strokeLinecap="round"
+          />
+        ))}
+        {glyph.satellites.map((node, index) => (
+          <Circle key={index} cx={node.x} cy={node.y} r={node.radius} fill={node.color} />
+        ))}
+        <Circle cx={glyph.hub.x} cy={glyph.hub.y} r={glyph.hub.radius} fill={glyph.hub.color} />
+      </Svg>
       <Text style={styles.code}>{code}</Text>
     </Pressable>
   );
@@ -45,28 +56,18 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm + 1,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.divider,
   },
   rowPressed: {
     backgroundColor: theme.colors.surface,
   },
-  avatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: theme.radius.sm - 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: theme.fontSize.caption,
-    fontWeight: theme.fontWeight.medium,
-  },
   code: {
     fontSize: theme.fontSize.body,
+    fontWeight: theme.fontWeight.medium,
     color: theme.colors.textPrimary,
   },
 });
