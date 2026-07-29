@@ -1,8 +1,19 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, ListRenderItemInfo, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  ListRenderItemInfo,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useDebouncedValue } from '../../core/hooks/useDebouncedValue';
+import { getLigandFetchErrorMessage } from '../../core/networking/ligandFetchError';
+import { fetchLigandCif } from '../../core/networking/ligandService';
 import { filterLigandCodes } from '../../core/persistence/ligandRepository';
 import { theme } from '../../design-system';
 import { LIGAND_ROW_HEIGHT, LigandRow } from './LigandRow';
@@ -19,11 +30,12 @@ function getItemLayout(_: ArrayLike<string> | null | undefined, index: number) {
 
 interface LigandListScreenProps {
   codes: string[];
-  onSelectLigand?: (code: string) => void;
+  onLigandLoaded: (code: string, raw: string) => void;
 }
 
-export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProps) {
+export function LigandListScreen({ codes, onLigandLoaded }: LigandListScreenProps) {
   const [query, setQuery] = useState('');
+  const [loadingCode, setLoadingCode] = useState<string | null>(null);
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
   const filteredCodes = useMemo(
     () => filterLigandCodes(codes, debouncedQuery),
@@ -31,9 +43,30 @@ export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProp
   );
   const trimmedQuery = debouncedQuery.trim();
 
+  const handleSelectLigand = useCallback(
+    async (code: string) => {
+      if (loadingCode !== null) {
+        return;
+      }
+
+      setLoadingCode(code);
+      const result = await fetchLigandCif(code);
+      setLoadingCode(null);
+
+      if (result.success) {
+        onLigandLoaded(code, result.raw);
+      } else {
+        Alert.alert(`Couldn't load ${code}`, getLigandFetchErrorMessage(result.error));
+      }
+    },
+    [loadingCode, onLigandLoaded]
+  );
+
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<string>) => <LigandRow code={item} onPress={onSelectLigand} />,
-    [onSelectLigand]
+    ({ item }: ListRenderItemInfo<string>) => (
+      <LigandRow code={item} onPress={handleSelectLigand} />
+    ),
+    [handleSelectLigand]
   );
 
   return (
@@ -59,27 +92,39 @@ export function LigandListScreen({ codes, onSelectLigand }: LigandListScreenProp
         />
       </View>
 
-      <FlatList
-        data={filteredCodes}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        getItemLayout={getItemLayout}
-        initialNumToRender={16}
-        maxToRenderPerBatch={16}
-        windowSize={10}
-        removeClippedSubviews
-        contentContainerStyle={filteredCodes.length === 0 ? styles.emptyContainer : undefined}
-        ListEmptyComponent={
-          <View style={styles.emptyState} accessible accessibilityRole="text">
-            <Text style={styles.emptyTitle}>
-              {trimmedQuery.length > 0 ? `No ligands match "${trimmedQuery}"` : 'No ligands available'}
-            </Text>
-            {trimmedQuery.length > 0 && (
-              <Text style={styles.emptySubtitle}>Try a different search term.</Text>
-            )}
+      <View style={styles.listContainer}>
+        <FlatList
+          data={filteredCodes}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          getItemLayout={getItemLayout}
+          initialNumToRender={16}
+          maxToRenderPerBatch={16}
+          windowSize={10}
+          removeClippedSubviews
+          contentContainerStyle={filteredCodes.length === 0 ? styles.emptyContainer : undefined}
+          ListEmptyComponent={
+            <View style={styles.emptyState} accessible accessibilityRole="text">
+              <Text style={styles.emptyTitle}>
+                {trimmedQuery.length > 0
+                  ? `No ligands match "${trimmedQuery}"`
+                  : 'No ligands available'}
+              </Text>
+              {trimmedQuery.length > 0 && (
+                <Text style={styles.emptySubtitle}>Try a different search term.</Text>
+              )}
+            </View>
+          }
+        />
+
+        {loadingCode !== null && (
+          <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
+            <ActivityIndicator color={theme.colors.accent} />
+            <Text style={styles.loadingTitle}>Fetching {loadingCode}.cif</Text>
+            <Text style={styles.loadingSubtitle}>files.rcsb.org</Text>
           </View>
-        }
-      />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -120,6 +165,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     padding: 0,
   },
+  listContainer: {
+    flex: 1,
+  },
   emptyContainer: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -139,5 +187,21 @@ const styles = StyleSheet.create({
     color: theme.colors.textQuaternary,
     marginTop: theme.spacing.xs,
     textAlign: 'center',
+  },
+  loadingOverlay: {
+    backgroundColor: 'rgba(10, 13, 17, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
+  },
+  loadingTitle: {
+    fontSize: theme.fontSize.body,
+    fontWeight: theme.fontWeight.medium,
+    color: theme.colors.textPrimary,
+    marginTop: theme.spacing.sm,
+  },
+  loadingSubtitle: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.textQuaternary,
   },
 });

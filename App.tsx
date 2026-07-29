@@ -8,6 +8,7 @@ import { useAppLock } from './src/core/security/useAppLock';
 import { PrivacyOverlay } from './src/features/app-lock/PrivacyOverlay';
 import { AuthFlow } from './src/features/auth/AuthFlow';
 import { LigandListScreen } from './src/features/ligand-list/LigandListScreen';
+import { ProteinViewScreen } from './src/features/protein-view/ProteinViewScreen';
 import { SplashScreen } from './src/features/splash/SplashScreen';
 
 const MIN_SPLASH_DURATION_MS = 1500;
@@ -17,6 +18,7 @@ ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
 export default function App() {
   const [ligandCodes, setLigandCodes] = useState<string[] | null>(null);
   const [minDurationElapsed, setMinDurationElapsed] = useState(false);
+  const [protein, setProtein] = useState<{ code: string; raw: string } | null>(null);
   const { isLocked, unlock } = useAppLock();
 
   useEffect(() => {
@@ -41,7 +43,21 @@ export default function App() {
     if (isLocked) {
       return <AuthFlow onAuthenticated={unlock} />;
     }
-    return <LigandListScreen codes={ligandCodes ?? []} />;
+    if (protein !== null) {
+      return (
+        <ProteinViewScreen
+          code={protein.code}
+          raw={protein.raw}
+          onBack={() => setProtein(null)}
+        />
+      );
+    }
+    return (
+      <LigandListScreen
+        codes={ligandCodes ?? []}
+        onLigandLoaded={(code, raw) => setProtein({ code, raw })}
+      />
+    );
   }
 
   return (
