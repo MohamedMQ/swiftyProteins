@@ -1,3 +1,4 @@
+import { getCachedLigandCif, setCachedLigandCif } from '../persistence/ligandCifCache';
 import type { LigandFetchError } from './ligandFetchError';
 import { isOffline } from './reachability';
 import { fetchLigandCifResponse, LigandRequestTimeoutError } from './rcsbClient';
@@ -19,6 +20,11 @@ export async function fetchLigandCif(
   code: string,
   signal?: AbortSignal
 ): Promise<LigandFetchResult> {
+  const cached = await getCachedLigandCif(code);
+  if (cached !== null) {
+    return { success: true, raw: cached };
+  }
+
   if (await isOffline()) {
     return { success: false, error: { type: 'noConnection' } };
   }
@@ -45,5 +51,6 @@ export async function fetchLigandCif(
   }
 
   const raw = await response.text();
+  setCachedLigandCif(code, raw);
   return { success: true, raw };
 }
