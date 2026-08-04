@@ -10,21 +10,41 @@ export interface Vec3 {
 export interface Atom {
   id: string;
   element: string;
-  /** Null when model_Cartn_x/y/z is missing for this atom — resolved by the ideal-coordinate fallback. */
+  /** Null when both model and ideal coordinates are missing — excluded when building the Molecule. */
   position: Vec3 | null;
 }
 
 export function parseAtoms(atomTable: CifCategoryTable): Atom[] {
-  return atomTable.rows.map((row) => {
-    const x = parseCifCoordinate(row.model_Cartn_x);
-    const y = parseCifCoordinate(row.model_Cartn_y);
-    const z = parseCifCoordinate(row.model_Cartn_z);
-    const position = x !== null && y !== null && z !== null ? { x, y, z } : null;
+  return atomTable.rows.map((row) => ({
+    id: row.atom_id,
+    element: normalizeElementSymbol(row.type_symbol),
+    position: resolveAtomPosition(row),
+  }));
+}
 
-    return {
-      id: row.atom_id,
-      element: normalizeElementSymbol(row.type_symbol),
-      position,
-    };
-  });
+/**
+ * model_Cartn_* (experimental coordinates) is preferred, but some entries —
+ * e.g. UNK, used for unmodeled residues — have `?` there for atoms that
+ * were never actually observed in a structure. pdbx_model_Cartn_*_ideal
+ * (Corina-computed) is the fallback; if that's missing too, the atom has
+ * no usable position at all.
+ */
+function resolveAtomPosition(row: Record<string, string>): Vec3 | null {
+  const model = readVec3(row, 'model_Cartn_x', 'model_Cartn_y', 'model_Cartn_z');
+  if (model !== null) {
+    return model;
+  }
+  return readVec3(
+    row,
+    'pdbx_model_Cartn_x_ideal',
+    'pdbx_model_Cartn_y_ideal',
+    'pdbx_model_Cartn_z_ideal'
+  );
+}
+
+function readVec3(row: Record<string, string>, xKey: string, yKey: string, zKey: string): Vec3 | null {
+  const x = parseCifCoordinate(row[xKey]);
+  const y = parseCifCoordinate(row[yKey]);
+  const z = parseCifCoordinate(row[zKey]);
+  return x !== null && y !== null && z !== null ? { x, y, z } : null;
 }
