@@ -7,14 +7,17 @@ export interface Vec3 {
   z: number;
 }
 
-export interface Atom {
+/**
+ * Intermediate parse result — position can still be null here. Molecule
+ * assembly filters these down to the final Atom type (always positioned).
+ */
+export interface ParsedAtom {
   id: string;
   element: string;
-  /** Null when both model and ideal coordinates are missing — excluded when building the Molecule. */
   position: Vec3 | null;
 }
 
-export function parseAtoms(atomTable: CifCategoryTable): Atom[] {
+export function parseAtoms(atomTable: CifCategoryTable): ParsedAtom[] {
   return atomTable.rows.map((row) => ({
     id: row.atom_id,
     element: normalizeElementSymbol(row.type_symbol),
