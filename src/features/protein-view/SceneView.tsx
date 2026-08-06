@@ -3,6 +3,14 @@ import { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import * as THREE from 'three';
 
+import { parseMolecule } from '../../core/parsing/molecule';
+import { frameCameraOnMolecule } from './cameraFraming';
+import { buildMoleculeGroup } from './moleculeSceneBuilder';
+
+interface SceneViewProps {
+  raw: string;
+}
+
 /**
  * three.js's WebGLRenderer defaults `canvas` to `document.createElementNS(...)`
  * when it's not supplied — a real browser DOM call that doesn't exist in
@@ -22,14 +30,8 @@ function createFakeCanvas(gl: ExpoWebGLRenderingContext) {
   } as unknown as HTMLCanvasElement;
 }
 
-/**
- * Native GL + three.js bridge, wrapped as a standalone component so the
- * render-loop lifecycle (start on context create, stop on unmount) lives in
- * one place. Content is currently a smoke-test cube proving the bridge
- * itself works — CPK ball-and-stick rendering replaces this scene in the
- * next commits, once the underlying pipeline is confirmed on a real device.
- */
-export function SceneView() {
+/** Native GL + three.js bridge. Render-loop lifecycle (start on context create, stop on unmount) lives here. */
+export function SceneView({ raw }: SceneViewProps) {
   const isMountedRef = useRef(true);
 
   useEffect(
@@ -39,44 +41,51 @@ export function SceneView() {
     []
   );
 
-  const onContextCreate = useCallback((gl: ExpoWebGLRenderingContext) => {
-    const renderer = new THREE.WebGLRenderer({ context: gl, canvas: createFakeCanvas(gl) });
-    renderer.setSize(gl.drawingBufferWidth, gl.drawingBufferHeight);
-    renderer.setClearColor(0x0e1116, 1);
+  const onContextCreate = useCallback(
+    (gl: ExpoWebGLRenderingContext) => {
+      const renderer = new THREE.WebGLRenderer({ context: gl, canvas: createFakeCanvas(gl) });
+      renderer.setSize(gl.drawingBufferWidth, gl.drawingBufferHeight);
+      renderer.setClearColor(0x0e1116, 1);
 
-    const camera = new THREE.PerspectiveCamera(
-      50,
-      gl.drawingBufferWidth / gl.drawingBufferHeight,
-      0.1,
-      100
-    );
-    camera.position.z = 4;
+      const camera = new THREE.PerspectiveCamera(
+        50,
+        gl.drawingBufferWidth / gl.drawingBufferHeight,
+        0.1,
+        100
+      );
 
-    const scene = new THREE.Scene();
+      const scene = new THREE.Scene();
 
-    const cube = new THREE.Mesh(
-      new THREE.BoxGeometry(1.5, 1.5, 1.5),
-      new THREE.MeshStandardMaterial({ color: 0x35c7a0, roughness: 0.5 })
-    );
-    scene.add(cube);
-
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    keyLight.position.set(2, 2, 3);
-    scene.add(keyLight);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-
-    const render = () => {
-      if (!isMountedRef.current) {
-        return;
+      // Parsing was already proven against real RCSB data in Day 6; this
+      // guards only against the theoretical case of a genuinely
+      // unparseable molecule reaching this screen, so the view stays
+      // blank instead of crashing rather than needing full error UI here.
+      try {
+        const molecule = parseMolecule(raw);
+        const moleculeGroup = buildMoleculeGroup(molecule);
+        scene.add(moleculeGroup);
+        frameCameraOnMolecule(moleculeGroup, camera, molecule.centroid);
+      } catch (error) {
+        console.warn('Failed to build molecule scene:', error);
       }
-      requestAnimationFrame(render);
-      cube.rotation.x += 0.01;
-      cube.rotation.y += 0.015;
-      renderer.render(scene, camera);
-      gl.endFrameEXP();
-    };
-    render();
-  }, []);
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      keyLight.position.set(2, 2, 3);
+      scene.add(keyLight);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+      const render = () => {
+        if (!isMountedRef.current) {
+          return;
+        }
+        requestAnimationFrame(render);
+        renderer.render(scene, camera);
+        gl.endFrameEXP();
+      };
+      render();
+    },
+    [raw]
+  );
 
   return <GLView style={styles.container} onContextCreate={onContextCreate} />;
 }

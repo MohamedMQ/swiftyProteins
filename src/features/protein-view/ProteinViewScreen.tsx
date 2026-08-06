@@ -11,13 +11,7 @@ interface ProteinViewScreenProps {
   onBack: () => void;
 }
 
-/**
- * Day 7 smoke test: SceneView currently renders a placeholder spinning cube
- * to prove the expo-gl + three.js bridge works on-device, before the real
- * CPK ball-and-stick renderer (built from `raw`) replaces it in the next
- * commits.
- */
-export function ProteinViewScreen({ code, raw: _raw, onBack }: ProteinViewScreenProps) {
+export function ProteinViewScreen({ code, raw, onBack }: ProteinViewScreenProps) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -33,7 +27,7 @@ export function ProteinViewScreen({ code, raw: _raw, onBack }: ProteinViewScreen
         <View style={styles.headerSpacer} />
       </View>
 
-      <SceneView />
+      <SceneView raw={raw} />
     </SafeAreaView>
   );
 }
