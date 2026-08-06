@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { parseMolecule } from '../../core/parsing/molecule';
 import { frameCameraOnMolecule } from './cameraFraming';
 import { addLightingRig } from './lightingRig';
-import { buildMoleculeGroup } from './moleculeSceneBuilder';
+import { buildMoleculeGroup, disposeMoleculeGroup } from './moleculeSceneBuilder';
 
 interface SceneViewProps {
   raw: string;
@@ -34,10 +34,15 @@ function createFakeCanvas(gl: ExpoWebGLRenderingContext) {
 /** Native GL + three.js bridge. Render-loop lifecycle (start on context create, stop on unmount) lives here. */
 export function SceneView({ raw }: SceneViewProps) {
   const isMountedRef = useRef(true);
+  const moleculeGroupRef = useRef<THREE.Group | null>(null);
 
   useEffect(
     () => () => {
       isMountedRef.current = false;
+      if (moleculeGroupRef.current !== null) {
+        disposeMoleculeGroup(moleculeGroupRef.current);
+        moleculeGroupRef.current = null;
+      }
     },
     []
   );
@@ -69,6 +74,7 @@ export function SceneView({ raw }: SceneViewProps) {
       try {
         const molecule = parseMolecule(raw);
         const moleculeGroup = buildMoleculeGroup(molecule);
+        moleculeGroupRef.current = moleculeGroup;
         scene.add(moleculeGroup);
         frameCameraOnMolecule(moleculeGroup, camera, molecule.centroid);
       } catch (error) {

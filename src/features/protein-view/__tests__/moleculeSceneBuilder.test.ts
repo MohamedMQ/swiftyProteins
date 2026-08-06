@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { getCpkColor } from '../../../core/chemistry/elementColors';
 import { getCovalentRadius } from '../../../core/chemistry/elementRadii';
 import { parseMolecule, type Molecule } from '../../../core/parsing/molecule';
-import { buildMoleculeGroup } from '../moleculeSceneBuilder';
+import { buildMoleculeGroup, disposeMoleculeGroup } from '../moleculeSceneBuilder';
 
 function loadFixture(name: string): string {
   return readFileSync(
@@ -79,11 +79,15 @@ describe('buildMoleculeGroup — geometry construction', () => {
     expect(cylinder.position.toArray()).toEqual([1.5, 2, 0]);
   });
 
-  it('sizes the bond cylinder length to the real distance between the two atoms', () => {
+  it('stretches the shared unit-length cylinder to the real distance between the two atoms', () => {
     const cylinder = cylinders[0];
     const geometry = cylinder.geometry as THREE.CylinderGeometry;
-    // 3-4-5 triangle: distance from (0,0,0) to (3,4,0) is exactly 5.
-    expect(geometry.parameters.height).toBeCloseTo(5, 5);
+    // 3-4-5 triangle: distance from (0,0,0) to (3,4,0) is exactly 5. Length
+    // is encoded via scale now, not baked into the geometry (see the
+    // geometry-reuse describe block below) — the geometry's own height
+    // parameter should stay the shared unit value.
+    expect(geometry.parameters.height).toBe(1);
+    expect(cylinder.scale.y).toBeCloseTo(5, 5);
   });
 
   it('orients the bond cylinder so its local +Y axis points along the bond direction', () => {
@@ -139,5 +143,89 @@ describe('buildMoleculeGroup — real molecule (HEM)', () => {
 
     expect(iron).toBeDefined();
     expect(ironMesh?.position.toArray()).toEqual([iron?.position.x, iron?.position.y, iron?.position.z]);
+  });
+});
+
+const repeatedElementMolecule: Molecule = {
+  atoms: [
+    { id: 'C1', element: 'C', position: { x: 0, y: 0, z: 0 } },
+    { id: 'C2', element: 'C', position: { x: 1, y: 0, z: 0 } },
+    { id: 'C3', element: 'C', position: { x: 2, y: 0, z: 0 } },
+    { id: 'O1', element: 'O', position: { x: 3, y: 0, z: 0 } },
+  ],
+  bonds: [
+    { atomIdA: 'C1', atomIdB: 'C2', order: 'single', isAromatic: false },
+    { atomIdA: 'C2', atomIdB: 'C3', order: 'single', isAromatic: false },
+    { atomIdA: 'C3', atomIdB: 'O1', order: 'double', isAromatic: false },
+  ],
+  formula: 'C3O',
+  centroid: { x: 1.5, y: 0, z: 0 },
+};
+
+describe('buildMoleculeGroup — geometry/material reuse', () => {
+  it('shares the exact same sphere geometry and material across every atom of the same element', () => {
+    const group = buildMoleculeGroup(repeatedElementMolecule);
+    const spheres = sphereMeshes(group);
+    const carbons = spheres.filter((mesh) => mesh.name.startsWith('C'));
+
+    expect(carbons).toHaveLength(3);
+    expect(carbons[1].geometry).toBe(carbons[0].geometry);
+    expect(carbons[2].geometry).toBe(carbons[0].geometry);
+    expect(carbons[1].material).toBe(carbons[0].material);
+    expect(carbons[2].material).toBe(carbons[0].material);
+  });
+
+  it('gives different elements different geometry and material instances', () => {
+    const group = buildMoleculeGroup(repeatedElementMolecule);
+    const spheres = sphereMeshes(group);
+    const carbon = spheres.find((mesh) => mesh.name === 'C1');
+    const oxygen = spheres.find((mesh) => mesh.name === 'O1');
+
+    expect(carbon?.geometry).not.toBe(oxygen?.geometry);
+    expect(carbon?.material).not.toBe(oxygen?.material);
+  });
+
+  it('creates exactly one sphere geometry per distinct element for a real molecule (HEM)', () => {
+    const molecule = parseMolecule(loadFixture('HEM.cif'));
+    const group = buildMoleculeGroup(molecule);
+    const distinctElements = new Set(molecule.atoms.map((atom) => atom.element));
+    const distinctGeometries = new Set(sphereMeshes(group).map((mesh) => mesh.geometry));
+
+    expect(distinctGeometries.size).toBe(distinctElements.size);
+  });
+
+  it('shares one unit-length cylinder geometry and one material across every bond, regardless of length', () => {
+    const group = buildMoleculeGroup(repeatedElementMolecule);
+    const cylinders = cylinderMeshes(group);
+
+    expect(cylinders).toHaveLength(3);
+    // The three bonds span different real distances (1, 1, and sqrt(2)
+    // since C3-O1 also isn't axis-aligned would differ — here all are
+    // axis-aligned at length 1, so assert on geometry/material identity,
+    // which is what this commit actually changed.
+    expect(cylinders[1].geometry).toBe(cylinders[0].geometry);
+    expect(cylinders[2].geometry).toBe(cylinders[0].geometry);
+    expect(cylinders[1].material).toBe(cylinders[0].material);
+    expect(cylinders[2].material).toBe(cylinders[0].material);
+  });
+});
+
+describe('disposeMoleculeGroup', () => {
+  it('disposes every unique geometry and material exactly once, even when shared by many meshes', () => {
+    const group = buildMoleculeGroup(repeatedElementMolecule);
+    const spheres = sphereMeshes(group);
+    const cylinders = cylinderMeshes(group);
+
+    const carbonGeometryDispose = jest.spyOn(spheres[0].geometry, 'dispose');
+    const carbonMaterialDispose = jest.spyOn(spheres[0].material as THREE.Material, 'dispose');
+    const bondGeometryDispose = jest.spyOn(cylinders[0].geometry, 'dispose');
+    const bondMaterialDispose = jest.spyOn(cylinders[0].material as THREE.Material, 'dispose');
+
+    disposeMoleculeGroup(group);
+
+    expect(carbonGeometryDispose).toHaveBeenCalledTimes(1);
+    expect(carbonMaterialDispose).toHaveBeenCalledTimes(1);
+    expect(bondGeometryDispose).toHaveBeenCalledTimes(1);
+    expect(bondMaterialDispose).toHaveBeenCalledTimes(1);
   });
 });
