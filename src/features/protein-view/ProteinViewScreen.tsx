@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '../../design-system';
+import { SceneView } from './SceneView';
 
 interface ProteinViewScreenProps {
   code: string;
@@ -11,12 +12,12 @@ interface ProteinViewScreenProps {
 }
 
 /**
- * Day 5 placeholder: proves the fetch/cache pipeline actually works end to
- * end by showing the raw .cif text. Day 6 replaces this body with parsed
- * molecule data, Day 7 with the 3D view — this screen and its navigation
- * stay, only the content changes.
+ * Day 7 smoke test: SceneView currently renders a placeholder spinning cube
+ * to prove the expo-gl + three.js bridge works on-device, before the real
+ * CPK ball-and-stick renderer (built from `raw`) replaces it in the next
+ * commits.
  */
-export function ProteinViewScreen({ code, raw, onBack }: ProteinViewScreenProps) {
+export function ProteinViewScreen({ code, raw: _raw, onBack }: ProteinViewScreenProps) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -32,9 +33,7 @@ export function ProteinViewScreen({ code, raw, onBack }: ProteinViewScreenProps)
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
-        <Text style={styles.raw}>{raw}</Text>
-      </ScrollView>
+      <SceneView />
     </SafeAreaView>
   );
 }
@@ -58,16 +57,5 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 24,
-  },
-  body: {
-    flex: 1,
-  },
-  bodyContent: {
-    padding: theme.spacing.lg,
-  },
-  raw: {
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.textSecondary,
-    fontFamily: 'monospace',
   },
 });
