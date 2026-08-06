@@ -4,6 +4,25 @@ import { StyleSheet } from 'react-native';
 import * as THREE from 'three';
 
 /**
+ * three.js's WebGLRenderer defaults `canvas` to `document.createElementNS(...)`
+ * when it's not supplied — a real browser DOM call that doesn't exist in
+ * React Native. Passing this minimal stand-in satisfies that default (and
+ * the handful of resize/style/event-listener touches WebGLRenderer makes
+ * on `domElement`) without ever needing a real DOM.
+ */
+function createFakeCanvas(gl: ExpoWebGLRenderingContext) {
+  return {
+    width: gl.drawingBufferWidth,
+    height: gl.drawingBufferHeight,
+    clientWidth: gl.drawingBufferWidth,
+    clientHeight: gl.drawingBufferHeight,
+    style: {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  } as unknown as HTMLCanvasElement;
+}
+
+/**
  * Native GL + three.js bridge, wrapped as a standalone component so the
  * render-loop lifecycle (start on context create, stop on unmount) lives in
  * one place. Content is currently a smoke-test cube proving the bridge
@@ -21,7 +40,7 @@ export function SceneView() {
   );
 
   const onContextCreate = useCallback((gl: ExpoWebGLRenderingContext) => {
-    const renderer = new THREE.WebGLRenderer({ context: gl });
+    const renderer = new THREE.WebGLRenderer({ context: gl, canvas: createFakeCanvas(gl) });
     renderer.setSize(gl.drawingBufferWidth, gl.drawingBufferHeight);
     renderer.setClearColor(0x0e1116, 1);
 
