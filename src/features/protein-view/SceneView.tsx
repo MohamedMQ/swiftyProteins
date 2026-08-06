@@ -5,6 +5,7 @@ import * as THREE from 'three';
 
 import { parseMolecule } from '../../core/parsing/molecule';
 import { frameCameraOnMolecule } from './cameraFraming';
+import { addLightingRig } from './lightingRig';
 import { buildMoleculeGroup } from './moleculeSceneBuilder';
 
 interface SceneViewProps {
@@ -55,6 +56,11 @@ export function SceneView({ raw }: SceneViewProps) {
       );
 
       const scene = new THREE.Scene();
+      // Lights are attached to the camera (see lightingRig.ts), so the
+      // camera itself needs to be part of the scene graph for three.js to
+      // find and apply them.
+      scene.add(camera);
+      addLightingRig(camera);
 
       // Parsing was already proven against real RCSB data in Day 6; this
       // guards only against the theoretical case of a genuinely
@@ -68,11 +74,6 @@ export function SceneView({ raw }: SceneViewProps) {
       } catch (error) {
         console.warn('Failed to build molecule scene:', error);
       }
-
-      const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-      keyLight.position.set(2, 2, 3);
-      scene.add(keyLight);
-      scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
       const render = () => {
         if (!isMountedRef.current) {
