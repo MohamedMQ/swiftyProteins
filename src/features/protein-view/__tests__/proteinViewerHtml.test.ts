@@ -69,4 +69,18 @@ describe('buildProteinViewerHtml', () => {
     expect(html).toContain("type: 'backgroundClick'");
     expect(html).toContain('clearSelection');
   });
+
+  it('exposes a window.__captureSnapshot function that posts the current viewer image', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('window.__captureSnapshot = function');
+    expect(html).toContain("type: 'snapshot'");
+    expect(html).toContain('viewer.pngURI()');
+  });
+
+  it('catches errors thrown while capturing a snapshot and posts them back', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    const captureFnMatch = html.match(/window\.__captureSnapshot = function \(\) \{[\s\S]*?\n {4}\};/);
+    expect(captureFnMatch).not.toBeNull();
+    expect(captureFnMatch?.[0]).toMatch(/try\s*{[\s\S]*catch/);
+  });
 });

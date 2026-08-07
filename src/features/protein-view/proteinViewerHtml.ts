@@ -100,6 +100,18 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
     viewer.zoomTo();
     viewer.render();
 
+    // Invoked from React Native via injectJavaScript to capture the
+    // current view for sharing — pngURI() reads directly from the
+    // canvas's framebuffer, so it captures exactly what's on screen,
+    // including the current rotation/zoom and any selection highlight.
+    window.__captureSnapshot = function () {
+      try {
+        post({ type: 'snapshot', dataUri: viewer.pngURI() });
+      } catch (error) {
+        post({ type: 'error', message: String(error && error.message ? error.message : error) });
+      }
+    };
+
     post({ type: 'ready' });
   } catch (error) {
     post({ type: 'error', message: String(error && error.message ? error.message : error) });

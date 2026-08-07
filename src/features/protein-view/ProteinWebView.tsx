@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import WebView from 'react-native-webview';
 
@@ -14,11 +16,18 @@ interface ProteinWebViewProps {
   raw: string;
 }
 
+export interface ProteinWebViewHandle {
+  requestSnapshot: () => void;
+}
+
 interface ViewerMessage {
-  type: 'ready' | 'error' | 'atomClick' | 'backgroundClick';
+  type: 'ready' | 'error' | 'atomClick' | 'backgroundClick' | 'snapshot';
   message?: string;
+  dataUri?: string;
   atom?: { id: number; element: string; x: number; y: number; z: number; bondOrders: number[] };
 }
+
+const SNAPSHOT_DATA_URI_PREFIX = 'data:image/png;base64,';
 
 /**
  * 3Dmol.js needs a real browser DOM, so it runs inside a WebView, not
@@ -26,10 +35,14 @@ interface ViewerMessage {
  * that self-contained HTML page (parse -> serialize to SDF -> inline into
  * the 3Dmol template) and bridging its postMessage events back out.
  */
-export function ProteinWebView({ code, raw }: ProteinWebViewProps) {
+export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewProps>(function ProteinWebView(
+  { code, raw },
+  ref,
+) {
   const [html, setHtml] = useState<string | null>(null);
   const [buildError, setBuildError] = useState<string | null>(null);
   const [selectedAtom, setSelectedAtom] = useState<AtomInfo | null>(null);
+  const webviewRef = useRef<WebView>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,6 +67,29 @@ export function ProteinWebView({ code, raw }: ProteinWebViewProps) {
     };
   }, [raw, code]);
 
+  useImperativeHandle(ref, () => ({
+    requestSnapshot() {
+      webviewRef.current?.injectJavaScript('window.__captureSnapshot(); true;');
+    },
+  }));
+
+  async function shareSnapshot(dataUri: string) {
+    if (!dataUri.startsWith(SNAPSHOT_DATA_URI_PREFIX)) {
+      return;
+    }
+    const base64Content = dataUri.slice(SNAPSHOT_DATA_URI_PREFIX.length);
+    const file = new File(Paths.cache, `${code}-${Date.now()}.png`);
+    file.create();
+    file.write(base64Content, { encoding: 'base64' });
+    try {
+      await Sharing.shareAsync(file.uri, { mimeType: 'image/png', dialogTitle: `Share ${code}` });
+    } finally {
+      if (file.exists) {
+        file.delete();
+      }
+    }
+  }
+
   function handleMessage(event: { nativeEvent: { data: string } }) {
     let message: ViewerMessage;
     try {
@@ -68,6 +104,10 @@ export function ProteinWebView({ code, raw }: ProteinWebViewProps) {
       setSelectedAtom(message.atom);
     } else if (message.type === 'backgroundClick') {
       setSelectedAtom(null);
+    } else if (message.type === 'snapshot' && message.dataUri !== undefined) {
+      shareSnapshot(message.dataUri).catch((error) => {
+        console.warn('Failed to share snapshot:', error);
+      });
     }
   }
 
@@ -89,6 +129,7 @@ export function ProteinWebView({ code, raw }: ProteinWebViewProps) {
   return (
     <View style={styles.container}>
       <WebView
+        ref={webviewRef}
         style={styles.container}
         source={{ html }}
         onMessage={handleMessage}
@@ -99,7 +140,7 @@ export function ProteinWebView({ code, raw }: ProteinWebViewProps) {
       {selectedAtom !== null && <AtomInfoCard atom={selectedAtom} />}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
