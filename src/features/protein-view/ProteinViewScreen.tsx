@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '../../design-system';
-import { SceneView } from './SceneView';
+import { ProteinWebView } from './ProteinWebView';
 
 interface ProteinViewScreenProps {
   code: string;
@@ -27,7 +27,7 @@ export function ProteinViewScreen({ code, raw, onBack }: ProteinViewScreenProps)
         <View style={styles.headerSpacer} />
       </View>
 
-      <SceneView raw={raw} />
+      <ProteinWebView code={code} raw={raw} />
     </SafeAreaView>
   );
 }
