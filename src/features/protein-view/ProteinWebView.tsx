@@ -9,7 +9,7 @@ import { moleculeToSdf } from '../../core/parsing/moleculeToSdf';
 import { parseMolecule } from '../../core/parsing/molecule';
 import { load3DmolScript } from '../../core/vendor/load3DmolScript';
 import { AtomInfoCard, type AtomInfo } from './AtomInfoCard';
-import { buildProteinViewerHtml } from './proteinViewerHtml';
+import { buildProteinViewerHtml, type VisualizationMode } from './proteinViewerHtml';
 
 interface ProteinWebViewProps {
   code: string;
@@ -18,10 +18,11 @@ interface ProteinWebViewProps {
 
 export interface ProteinWebViewHandle {
   requestSnapshot: () => void;
+  setVisualizationMode: (mode: VisualizationMode) => void;
 }
 
 interface ViewerMessage {
-  type: 'ready' | 'error' | 'atomClick' | 'backgroundClick' | 'snapshot';
+  type: 'ready' | 'error' | 'atomClick' | 'backgroundClick' | 'snapshot' | 'visualizationModeChanged';
   message?: string;
   dataUri?: string;
   atom?: { id: number; element: string; x: number; y: number; z: number; bondOrders: number[] };
@@ -70,6 +71,9 @@ export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewPro
   useImperativeHandle(ref, () => ({
     requestSnapshot() {
       webviewRef.current?.injectJavaScript('window.__captureSnapshot(); true;');
+    },
+    setVisualizationMode(mode: VisualizationMode) {
+      webviewRef.current?.injectJavaScript(`window.__setVisualizationMode(${JSON.stringify(mode)}); true;`);
     },
   }));
 

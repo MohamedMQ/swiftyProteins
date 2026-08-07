@@ -1,4 +1,4 @@
-import { buildProteinViewerHtml } from '../proteinViewerHtml';
+import { buildProteinViewerHtml, VISUALIZATION_MODES } from '../proteinViewerHtml';
 
 describe('buildProteinViewerHtml', () => {
   it('embeds the given 3Dmol script verbatim inside a script tag', () => {
@@ -54,14 +54,14 @@ describe('buildProteinViewerHtml', () => {
     expect(() => new Function(glueScript)).not.toThrow();
   });
 
-  it('scales up the highlighted atom sphere beyond the default sphere scale', () => {
+  it('scales up the highlighted atom sphere beyond the current mode sphere scale', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
-    const defaultScaleMatch = html.match(/var defaultStyle[\s\S]*?scale:\s*([\d.]+)/);
-    const highlightScaleMatch = html.match(/var highlightStyle[\s\S]*?scale:\s*([\d.]+)/);
+    const ballAndStickScaleMatch = html.match(/ballAndStick:\s*\{[\s\S]*?sphere:\s*\{\s*scale:\s*([\d.]+)/);
+    const highlightFactorMatch = html.match(/baseScale \* ([\d.]+)/);
 
-    expect(defaultScaleMatch).not.toBeNull();
-    expect(highlightScaleMatch).not.toBeNull();
-    expect(Number(highlightScaleMatch?.[1])).toBeGreaterThan(Number(defaultScaleMatch?.[1]));
+    expect(ballAndStickScaleMatch).not.toBeNull();
+    expect(highlightFactorMatch).not.toBeNull();
+    expect(Number(highlightFactorMatch?.[1])).toBeGreaterThan(1);
   });
 
   it('reports a background click distinctly from an atom click, and clears the selection', () => {
@@ -82,5 +82,46 @@ describe('buildProteinViewerHtml', () => {
     const captureFnMatch = html.match(/window\.__captureSnapshot = function \(\) \{[\s\S]*?\n {4}\};/);
     expect(captureFnMatch).not.toBeNull();
     expect(captureFnMatch?.[0]).toMatch(/try\s*{[\s\S]*catch/);
+  });
+
+  it('defines a style for every VisualizationMode and exposes a mode switcher', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    for (const mode of VISUALIZATION_MODES) {
+      expect(html).toContain(`${mode}:`);
+    }
+    expect(html).toContain('window.__setVisualizationMode = function (mode)');
+    expect(html).toContain("post({ type: 'visualizationModeChanged', mode: mode })");
+  });
+
+  it('gives the space-filling model no fixed sphere radius, so 3Dmol sizes atoms by their real van der Waals radius', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    const spaceFillingMatch = html.match(/spaceFilling:\s*\{[\s\S]*?\},/);
+    expect(spaceFillingMatch).not.toBeNull();
+    expect(spaceFillingMatch?.[0]).toContain('sphere:');
+    expect(spaceFillingMatch?.[0]).not.toContain('stick:');
+  });
+
+  it('gives the wireframe model bonds-only styling with no sphere', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    const wireframeMatch = html.match(/wireframe:\s*\{[\s\S]*?\},/);
+    expect(wireframeMatch).not.toBeNull();
+    expect(wireframeMatch?.[0]).toContain('line:');
+    expect(wireframeMatch?.[0]).not.toContain('sphere:');
+    expect(wireframeMatch?.[0]).not.toContain('stick:');
+  });
+
+  it('re-applies the current mode style to a re-selected atom after switching modes, rather than reverting to ball-and-stick', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('function applyCurrentStyle');
+    expect(html).toContain('highlightStyleFor(currentStyle)');
+    expect(html).not.toContain('var defaultStyle');
+    expect(html).not.toContain('var highlightStyle');
+  });
+
+  it('the glue script remains syntactically valid JS after adding mode switching', () => {
+    const html = buildProteinViewerHtml('/* fake 3dmol build */', 'DUMMY_SDF');
+    const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+    const glueScript = scripts[scripts.length - 1];
+    expect(() => new Function(glueScript)).not.toThrow();
   });
 });

@@ -9,17 +9,29 @@ const HIGHLIGHT_SCALE_FACTOR = 1.4;
 // container-level handler treats it as "hit an atom", not a background
 // click — 3Dmol.js has no separate "background click" event of its own.
 const ATOM_CLICK_DEBOUNCE_MS = 50;
+// Leaving `scale` unset makes 3Dmol size each sphere by its actual van der
+// Waals radius, which is what the space-filling/CPK model is supposed to show.
+const SPACE_FILLING_SCALE = 1.0;
+// Wireframe and stick modes have no sphere of their own to scale up for a
+// selection highlight, so the highlight sphere falls back to this size.
+const HIGHLIGHT_FALLBACK_SPHERE_SCALE = 0.3;
+
+export const VISUALIZATION_MODES = ['ballAndStick', 'spaceFilling', 'wireframe', 'stick'] as const;
+export type VisualizationMode = (typeof VISUALIZATION_MODES)[number];
 
 /**
  * Builds a self-contained HTML page: 3Dmol.js inlined directly (no CDN
- * dependency at runtime), fed the given SDF, styled ball-and-stick with
- * the Jmol color scheme (the same standard CPK colors the subject asks
- * for), and wired to post messages back to React Native for readiness,
- * atom taps, and background taps (dismiss). Tapping an atom also bumps its
- * sphere scale as a selection highlight, reverted on the next tap
- * elsewhere. threeDmolScript is injected as-is (trusted, bundled asset);
- * sdf goes through JSON.stringify so any characters in it are safely
- * escaped as a JS string literal, not interpreted as HTML/script markup.
+ * dependency at runtime), fed the given SDF, styled ball-and-stick by
+ * default with the Jmol color scheme (the same standard CPK colors the
+ * subject asks for), and wired to post messages back to React Native for
+ * readiness, atom taps, and background taps (dismiss). Tapping an atom
+ * also bumps its sphere scale as a selection highlight, reverted on the
+ * next tap elsewhere. `window.__setVisualizationMode` lets React Native
+ * switch to the bonus space-filling/wireframe/stick models in place,
+ * without re-parsing or re-adding the SDF model. threeDmolScript is
+ * injected as-is (trusted, bundled asset); sdf goes through
+ * JSON.stringify so any characters in it are safely escaped as a JS
+ * string literal, not interpreted as HTML/script markup.
  */
 export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): string {
   return `<!DOCTYPE html>
@@ -48,31 +60,55 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
       backgroundColor: '${BACKGROUND_COLOR}',
     });
 
-    var defaultStyle = {
-      stick: { radius: ${STICK_RADIUS}, colorscheme: 'Jmol' },
-      sphere: { scale: ${SPHERE_SCALE}, colorscheme: 'Jmol' },
+    var STYLES = {
+      ballAndStick: {
+        stick: { radius: ${STICK_RADIUS}, colorscheme: 'Jmol' },
+        sphere: { scale: ${SPHERE_SCALE}, colorscheme: 'Jmol' },
+      },
+      spaceFilling: {
+        sphere: { scale: ${SPACE_FILLING_SCALE}, colorscheme: 'Jmol' },
+      },
+      wireframe: {
+        line: { colorscheme: 'Jmol' },
+      },
+      stick: {
+        stick: { radius: ${STICK_RADIUS}, colorscheme: 'Jmol' },
+      },
     };
-    var highlightStyle = {
-      stick: { radius: ${STICK_RADIUS}, colorscheme: 'Jmol' },
-      sphere: { scale: ${SPHERE_SCALE * HIGHLIGHT_SCALE_FACTOR}, colorscheme: 'Jmol' },
-    };
+    var currentStyle = STYLES.ballAndStick;
     var selectedSerial = null;
     var lastAtomClickAt = 0;
 
+    function highlightStyleFor(style) {
+      var baseScale = (style.sphere && style.sphere.scale) || ${HIGHLIGHT_FALLBACK_SPHERE_SCALE};
+      var highlighted = JSON.parse(JSON.stringify(style));
+      highlighted.sphere = { scale: baseScale * ${HIGHLIGHT_SCALE_FACTOR}, colorscheme: 'Jmol' };
+      return highlighted;
+    }
+
     function clearSelection() {
       if (selectedSerial !== null) {
-        viewer.setStyle({ serial: selectedSerial }, defaultStyle);
+        viewer.setStyle({ serial: selectedSerial }, currentStyle);
         selectedSerial = null;
       }
     }
 
+    function applyCurrentStyle() {
+      var previousSelected = selectedSerial;
+      viewer.setStyle({}, currentStyle);
+      if (previousSelected !== null) {
+        viewer.setStyle({ serial: previousSelected }, highlightStyleFor(currentStyle));
+      }
+      viewer.render();
+    }
+
     viewer.addModel(${JSON.stringify(sdf)}, 'sdf');
-    viewer.setStyle({}, defaultStyle);
+    applyCurrentStyle();
 
     viewer.setClickable({}, true, function (atom) {
       lastAtomClickAt = Date.now();
       clearSelection();
-      viewer.setStyle({ serial: atom.serial }, highlightStyle);
+      viewer.setStyle({ serial: atom.serial }, highlightStyleFor(currentStyle));
       selectedSerial = atom.serial;
       viewer.render();
 
@@ -96,6 +132,22 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
         post({ type: 'backgroundClick' });
       }
     });
+
+    // Invoked from React Native to switch between the mandatory
+    // ball-and-stick model and the bonus space-filling/wireframe/stick
+    // models, in place, without re-parsing or re-adding the SDF model.
+    window.__setVisualizationMode = function (mode) {
+      try {
+        if (!STYLES[mode]) {
+          return;
+        }
+        currentStyle = STYLES[mode];
+        applyCurrentStyle();
+        post({ type: 'visualizationModeChanged', mode: mode });
+      } catch (error) {
+        post({ type: 'error', message: String(error && error.message ? error.message : error) });
+      }
+    };
 
     viewer.zoomTo();
     viewer.render();
