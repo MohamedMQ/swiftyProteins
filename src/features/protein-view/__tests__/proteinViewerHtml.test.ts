@@ -44,4 +44,29 @@ describe('buildProteinViewerHtml', () => {
     expect(html).not.toMatch(/<script[^>]+src=/);
     expect(html).not.toMatch(/<link[^>]+href=/);
   });
+
+  it('the glue script (excluding the embedded 3Dmol library) is syntactically valid JS', () => {
+    const html = buildProteinViewerHtml('/* fake 3dmol build */', 'DUMMY_SDF');
+    const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+    const glueScript = scripts[scripts.length - 1];
+
+    expect(glueScript).toContain('setClickable');
+    expect(() => new Function(glueScript)).not.toThrow();
+  });
+
+  it('scales up the highlighted atom sphere beyond the default sphere scale', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    const defaultScaleMatch = html.match(/var defaultStyle[\s\S]*?scale:\s*([\d.]+)/);
+    const highlightScaleMatch = html.match(/var highlightStyle[\s\S]*?scale:\s*([\d.]+)/);
+
+    expect(defaultScaleMatch).not.toBeNull();
+    expect(highlightScaleMatch).not.toBeNull();
+    expect(Number(highlightScaleMatch?.[1])).toBeGreaterThan(Number(defaultScaleMatch?.[1]));
+  });
+
+  it('reports a background click distinctly from an atom click, and clears the selection', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain("type: 'backgroundClick'");
+    expect(html).toContain('clearSelection');
+  });
 });
