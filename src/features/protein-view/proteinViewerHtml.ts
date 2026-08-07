@@ -78,7 +78,14 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
 
       post({
         type: 'atomClick',
-        atom: { id: atom.serial, element: atom.elem, x: atom.x, y: atom.y, z: atom.z },
+        atom: {
+          id: atom.serial,
+          element: atom.elem,
+          x: atom.x,
+          y: atom.y,
+          z: atom.z,
+          bondOrders: atom.bondOrder || [],
+        },
       });
     });
 

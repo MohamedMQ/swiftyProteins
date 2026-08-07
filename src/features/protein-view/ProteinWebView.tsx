@@ -6,6 +6,7 @@ import { theme } from '../../design-system';
 import { moleculeToSdf } from '../../core/parsing/moleculeToSdf';
 import { parseMolecule } from '../../core/parsing/molecule';
 import { load3DmolScript } from '../../core/vendor/load3DmolScript';
+import { AtomInfoCard, type AtomInfo } from './AtomInfoCard';
 import { buildProteinViewerHtml } from './proteinViewerHtml';
 
 interface ProteinWebViewProps {
@@ -14,9 +15,9 @@ interface ProteinWebViewProps {
 }
 
 interface ViewerMessage {
-  type: 'ready' | 'error' | 'atomClick';
+  type: 'ready' | 'error' | 'atomClick' | 'backgroundClick';
   message?: string;
-  atom?: { id: number; element: string; x: number; y: number; z: number };
+  atom?: { id: number; element: string; x: number; y: number; z: number; bondOrders: number[] };
 }
 
 /**
@@ -28,6 +29,7 @@ interface ViewerMessage {
 export function ProteinWebView({ code, raw }: ProteinWebViewProps) {
   const [html, setHtml] = useState<string | null>(null);
   const [buildError, setBuildError] = useState<string | null>(null);
+  const [selectedAtom, setSelectedAtom] = useState<AtomInfo | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,9 +64,10 @@ export function ProteinWebView({ code, raw }: ProteinWebViewProps) {
 
     if (message.type === 'error') {
       console.warn('3Dmol viewer error:', message.message);
-    } else if (message.type === 'atomClick') {
-      // Day 8 wires this into the atom info popup.
-      console.log('Atom tapped:', message.atom);
+    } else if (message.type === 'atomClick' && message.atom !== undefined) {
+      setSelectedAtom(message.atom);
+    } else if (message.type === 'backgroundClick') {
+      setSelectedAtom(null);
     }
   }
 
@@ -84,14 +87,17 @@ export function ProteinWebView({ code, raw }: ProteinWebViewProps) {
   }
 
   return (
-    <WebView
-      style={styles.container}
-      source={{ html }}
-      onMessage={handleMessage}
-      originWhitelist={['*']}
-      javaScriptEnabled
-      domStorageEnabled={false}
-    />
+    <View style={styles.container}>
+      <WebView
+        style={styles.container}
+        source={{ html }}
+        onMessage={handleMessage}
+        originWhitelist={['*']}
+        javaScriptEnabled
+        domStorageEnabled={false}
+      />
+      {selectedAtom !== null && <AtomInfoCard atom={selectedAtom} />}
+    </View>
   );
 }
 
