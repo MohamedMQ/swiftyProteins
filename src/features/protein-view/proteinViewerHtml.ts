@@ -2,6 +2,8 @@ import { VISUALIZATION_MODES, type VisualizationMode } from '../../core/viewer/v
 
 export { VISUALIZATION_MODES, type VisualizationMode };
 
+export type ImageExportFormat = 'png' | 'jpeg';
+
 const BACKGROUND_COLOR = '#0E1116';
 // Matches the proportions tuned in the earlier native ball-and-stick
 // renderer: covalent-radius-scaled spheres, sticks thinner than any atom.
@@ -27,6 +29,7 @@ const SAME_ELEMENT_HIGHLIGHT_SCALE_FACTOR = 1.15;
 const DOUBLE_TAP_MAX_INTERVAL_MS = 350;
 const CENTER_ON_ATOM_ANIMATION_MS = 400;
 const MEASUREMENT_LINE_COLOR = 'yellow';
+const JPEG_EXPORT_QUALITY = 0.92;
 
 /**
  * Builds a self-contained HTML page: 3Dmol.js inlined directly (no CDN
@@ -49,6 +52,9 @@ const MEASUREMENT_LINE_COLOR = 'yellow';
  * `options` seeds the initial visualization mode and label visibility
  * (from the user's saved preferences) so the viewer opens directly in the
  * right state instead of flashing the hardcoded defaults first.
+ * `window.__captureSnapshot(format)` exports either PNG (via 3Dmol's own
+ * pngURI(), the default) or JPEG (via the canvas's own toDataURL, since
+ * 3Dmol doesn't expose a JPEG equivalent) for sharing.
  * threeDmolScript is injected as-is (trusted, bundled asset); sdf goes
  * through JSON.stringify so any characters in it are safely escaped as a
  * JS string literal, not interpreted as HTML/script markup.
@@ -364,12 +370,18 @@ export function buildProteinViewerHtml(
     }
 
     // Invoked from React Native via injectJavaScript to capture the
-    // current view for sharing — pngURI() reads directly from the
-    // canvas's framebuffer, so it captures exactly what's on screen,
-    // including the current rotation/zoom and any selection highlight.
-    window.__captureSnapshot = function () {
+    // current view for sharing — pngURI() (and, for jpeg, the underlying
+    // canvas's own toDataURL) reads directly from the canvas's
+    // framebuffer, so it captures exactly what's on screen, including the
+    // current rotation/zoom, any selection highlight, and any drawn
+    // measurement line.
+    window.__captureSnapshot = function (format) {
       try {
-        post({ type: 'snapshot', dataUri: viewer.pngURI() });
+        var dataUri =
+          format === 'jpeg'
+            ? viewer.getCanvas().toDataURL('image/jpeg', ${JPEG_EXPORT_QUALITY})
+            : viewer.pngURI();
+        post({ type: 'snapshot', dataUri: dataUri, format: format === 'jpeg' ? 'jpeg' : 'png' });
       } catch (error) {
         post({ type: 'error', message: String(error && error.message ? error.message : error) });
       }

@@ -9,7 +9,7 @@ import { moleculeToSdf } from '../../core/parsing/moleculeToSdf';
 import { parseMolecule } from '../../core/parsing/molecule';
 import { load3DmolScript } from '../../core/vendor/load3DmolScript';
 import { AtomInfoCard, type AtomInfo, type BondDetail } from './AtomInfoCard';
-import { buildProteinViewerHtml, type VisualizationMode } from './proteinViewerHtml';
+import { buildProteinViewerHtml, type ImageExportFormat, type VisualizationMode } from './proteinViewerHtml';
 
 interface ProteinWebViewProps {
   code: string;
@@ -19,7 +19,7 @@ interface ProteinWebViewProps {
 }
 
 export interface ProteinWebViewHandle {
-  requestSnapshot: () => void;
+  requestSnapshot: (format: ImageExportFormat) => void;
   setVisualizationMode: (mode: VisualizationMode) => void;
   setAtomLabelsVisible: (visible: boolean) => void;
   setMeasureModeEnabled: (enabled: boolean) => void;
@@ -54,9 +54,13 @@ interface ViewerMessage {
   distance?: number;
   fromElement?: string;
   toElement?: string;
+  format?: ImageExportFormat;
 }
 
-const SNAPSHOT_DATA_URI_PREFIX = 'data:image/png;base64,';
+const SNAPSHOT_MIME_TYPE: Record<ImageExportFormat, string> = {
+  png: 'image/png',
+  jpeg: 'image/jpeg',
+};
 
 /**
  * 3Dmol.js needs a real browser DOM, so it runs inside a WebView, not
@@ -108,8 +112,8 @@ export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewPro
   }, [raw, code]);
 
   useImperativeHandle(ref, () => ({
-    requestSnapshot() {
-      webviewRef.current?.injectJavaScript('window.__captureSnapshot(); true;');
+    requestSnapshot(format: ImageExportFormat) {
+      webviewRef.current?.injectJavaScript(`window.__captureSnapshot(${JSON.stringify(format)}); true;`);
     },
     setVisualizationMode(mode: VisualizationMode) {
       webviewRef.current?.injectJavaScript(`window.__setVisualizationMode(${JSON.stringify(mode)}); true;`);
@@ -122,16 +126,19 @@ export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewPro
     },
   }));
 
-  async function shareSnapshot(dataUri: string) {
-    if (!dataUri.startsWith(SNAPSHOT_DATA_URI_PREFIX)) {
+  async function shareSnapshot(dataUri: string, format: ImageExportFormat) {
+    const mimeType = SNAPSHOT_MIME_TYPE[format];
+    const prefix = `data:${mimeType};base64,`;
+    if (!dataUri.startsWith(prefix)) {
       return;
     }
-    const base64Content = dataUri.slice(SNAPSHOT_DATA_URI_PREFIX.length);
-    const file = new File(Paths.cache, `${code}-${Date.now()}.png`);
+    const base64Content = dataUri.slice(prefix.length);
+    const extension = format === 'jpeg' ? 'jpg' : 'png';
+    const file = new File(Paths.cache, `${code}-${Date.now()}.${extension}`);
     file.create();
     file.write(base64Content, { encoding: 'base64' });
     try {
-      await Sharing.shareAsync(file.uri, { mimeType: 'image/png', dialogTitle: `Share ${code}` });
+      await Sharing.shareAsync(file.uri, { mimeType, dialogTitle: `Share ${code}` });
     } finally {
       if (file.exists) {
         file.delete();
@@ -153,8 +160,8 @@ export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewPro
       setSelectedAtom(message.atom);
     } else if (message.type === 'backgroundClick') {
       setSelectedAtom(null);
-    } else if (message.type === 'snapshot' && message.dataUri !== undefined) {
-      shareSnapshot(message.dataUri).catch((error) => {
+    } else if (message.type === 'snapshot' && message.dataUri !== undefined && message.format !== undefined) {
+      shareSnapshot(message.dataUri, message.format).catch((error) => {
         console.warn('Failed to share snapshot:', error);
       });
     } else if (message.type === 'measureModeChanged') {

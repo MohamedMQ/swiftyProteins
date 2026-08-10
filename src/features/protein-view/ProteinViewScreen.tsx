@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '../../design-system';
@@ -45,6 +45,14 @@ export function ProteinViewScreen({
     webviewRef.current?.setMeasureModeEnabled(next);
   }
 
+  function handleSharePress() {
+    Alert.alert('Share ligand', 'Choose an image format', [
+      { text: 'PNG', onPress: () => webviewRef.current?.requestSnapshot('png') },
+      { text: 'JPEG', onPress: () => webviewRef.current?.requestSnapshot('jpeg') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -58,7 +66,7 @@ export function ProteinViewScreen({
         </Pressable>
         <Text style={styles.title}>{code}</Text>
         <Pressable
-          onPress={() => webviewRef.current?.requestSnapshot()}
+          onPress={handleSharePress}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Share this ligand"

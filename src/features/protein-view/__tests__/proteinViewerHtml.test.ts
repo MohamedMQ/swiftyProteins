@@ -79,16 +79,23 @@ describe('buildProteinViewerHtml', () => {
     expect(html).toContain('clearSelection');
   });
 
-  it('exposes a window.__captureSnapshot function that posts the current viewer image', () => {
+  it('exposes a window.__captureSnapshot function that posts the current viewer image as PNG by default', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
-    expect(html).toContain('window.__captureSnapshot = function');
+    expect(html).toContain('window.__captureSnapshot = function (format)');
     expect(html).toContain("type: 'snapshot'");
     expect(html).toContain('viewer.pngURI()');
   });
 
+  it('exports JPEG via the canvas\'s own toDataURL, since 3Dmol has no JPEG-specific method', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain("format === 'jpeg'");
+    expect(html).toContain("viewer.getCanvas().toDataURL('image/jpeg',");
+    expect(html).toContain("format: format === 'jpeg' ? 'jpeg' : 'png'");
+  });
+
   it('catches errors thrown while capturing a snapshot and posts them back', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
-    const captureFnMatch = html.match(/window\.__captureSnapshot = function \(\) \{[\s\S]*?\n {4}\};/);
+    const captureFnMatch = html.match(/window\.__captureSnapshot = function \(format\) \{[\s\S]*?\n {4}\};/);
     expect(captureFnMatch).not.toBeNull();
     expect(captureFnMatch?.[0]).toMatch(/try\s*{[\s\S]*catch/);
   });
