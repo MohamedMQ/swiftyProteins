@@ -39,6 +39,15 @@ describe('buildProteinViewerHtml', () => {
     expect(html).toContain("type: 'atomClick'");
   });
 
+  it('computes each bond neighbor by index selection and includes element, order, and Euclidean length', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('viewer.selectedAtoms({ index: neighborIndices[b] })');
+    expect(html).toContain('Math.sqrt(dx * dx + dy * dy + dz * dz)');
+    expect(html).toContain('bonds: bondDetails');
+    expect(html).toContain('element: neighbor.elem');
+    expect(html).toContain('order: (atom.bondOrder && atom.bondOrder[b]) || 1');
+  });
+
   it('produces a single self-contained HTML document (no external script/link src)', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
     expect(html).not.toMatch(/<script[^>]+src=/);

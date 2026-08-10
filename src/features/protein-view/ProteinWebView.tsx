@@ -8,7 +8,7 @@ import { theme } from '../../design-system';
 import { moleculeToSdf } from '../../core/parsing/moleculeToSdf';
 import { parseMolecule } from '../../core/parsing/molecule';
 import { load3DmolScript } from '../../core/vendor/load3DmolScript';
-import { AtomInfoCard, type AtomInfo } from './AtomInfoCard';
+import { AtomInfoCard, type AtomInfo, type BondDetail } from './AtomInfoCard';
 import { buildProteinViewerHtml, type VisualizationMode } from './proteinViewerHtml';
 
 interface ProteinWebViewProps {
@@ -35,7 +35,15 @@ interface ViewerMessage {
     | 'atomLabelsVisibilityChanged';
   message?: string;
   dataUri?: string;
-  atom?: { id: number; element: string; x: number; y: number; z: number; bondOrders: number[] };
+  atom?: {
+    id: number;
+    element: string;
+    x: number;
+    y: number;
+    z: number;
+    bondOrders: number[];
+    bonds?: BondDetail[];
+  };
 }
 
 const SNAPSHOT_DATA_URI_PREFIX = 'data:image/png;base64,';

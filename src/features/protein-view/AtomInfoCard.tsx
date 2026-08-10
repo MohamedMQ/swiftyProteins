@@ -3,16 +3,29 @@ import { StyleSheet, Text, View } from 'react-native';
 import { getElementInfo } from '../../core/chemistry/elementInfo';
 import { theme } from '../../design-system';
 
+export interface BondDetail {
+  element: string;
+  order: number;
+  length: number;
+}
+
 export interface AtomInfo {
   element: string;
   x: number;
   y: number;
   z: number;
   bondOrders: number[];
+  bonds?: BondDetail[];
 }
 
 interface AtomInfoCardProps {
   atom: AtomInfo;
+}
+
+const BOND_ORDER_LABELS: Record<number, string> = { 1: 'single', 2: 'double', 3: 'triple' };
+
+export function bondOrderLabel(order: number): string {
+  return BOND_ORDER_LABELS[order] ?? 'unknown';
 }
 
 export function summarizeBonds(bondOrders: number[]): string {
@@ -39,6 +52,10 @@ export function summarizeBonds(bondOrders: number[]): string {
     .join(', ');
 }
 
+export function formatBondLength(length: number): string {
+  return `${length.toFixed(2)} Å`;
+}
+
 function formatCoordinate(value: number): string {
   return value.toFixed(1);
 }
@@ -47,6 +64,9 @@ export function AtomInfoCard({ atom }: AtomInfoCardProps) {
   const info = getElementInfo(atom.element);
   const position = `${formatCoordinate(atom.x)}, ${formatCoordinate(atom.y)}, ${formatCoordinate(atom.z)}`;
   const bonds = summarizeBonds(atom.bondOrders);
+  const bondDetailsText = (atom.bonds ?? [])
+    .map((bond) => `${bond.element} ${bondOrderLabel(bond.order)} bond, ${formatBondLength(bond.length)}`)
+    .join('. ');
 
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
@@ -54,7 +74,9 @@ export function AtomInfoCard({ atom }: AtomInfoCardProps) {
         style={styles.card}
         accessible
         accessibilityRole="text"
-        accessibilityLabel={`${info.name}. Element ${atom.element}. Position ${position}. Bonds: ${bonds}.`}
+        accessibilityLabel={`${info.name}. Element ${atom.element}. Position ${position}. Bonds: ${bonds}.${
+          bondDetailsText.length > 0 ? ` ${bondDetailsText}.` : ''
+        }`}
       >
         <View style={styles.header}>
           <View style={[styles.dot, { backgroundColor: info.color }]} />
@@ -77,6 +99,18 @@ export function AtomInfoCard({ atom }: AtomInfoCardProps) {
             <Text style={styles.rowValue}>{bonds}</Text>
           </View>
         </View>
+        {atom.bonds !== undefined && atom.bonds.length > 0 && (
+          <View style={styles.bondList}>
+            {atom.bonds.map((bond, index) => (
+              <View key={index} style={styles.bondRow}>
+                <Text style={styles.bondText}>
+                  {bond.element} · {bondOrderLabel(bond.order)}
+                </Text>
+                <Text style={styles.bondText}>{formatBondLength(bond.length)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -135,5 +169,20 @@ const styles = StyleSheet.create({
   rowValue: {
     fontSize: theme.fontSize.caption,
     color: theme.colors.textSecondary,
+  },
+  bondList: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
+    marginTop: theme.spacing.xs + 2,
+    paddingTop: theme.spacing.xs + 2,
+    gap: theme.spacing.xs,
+  },
+  bondRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  bondText: {
+    fontSize: theme.fontSize.caption,
+    color: theme.colors.textQuaternary,
   },
 });

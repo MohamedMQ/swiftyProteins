@@ -36,7 +36,9 @@ const CENTER_ON_ATOM_ANIMATION_MS = 400;
  * bumps its sphere scale as a selection highlight and also gives every
  * other atom of the same element a smaller highlight bump, both reverted
  * on the next tap elsewhere; double-tapping the same atom re-centers the
- * camera on it. `window.__setVisualizationMode` lets React Native
+ * camera on it, and the atomClick message includes each of the atom's
+ * bonds (neighbor element, order, and length) for the info popup to show.
+ * `window.__setVisualizationMode` lets React Native
  * switch to the bonus space-filling/wireframe/stick models in place,
  * without re-parsing or re-adding the SDF model, and
  * `window.__setAtomLabelsVisible` toggles per-atom element-symbol labels.
@@ -171,6 +173,27 @@ export function buildProteinViewerHtml(
         viewer.center({ serial: atom.serial }, ${CENTER_ON_ATOM_ANIMATION_MS});
       }
 
+      // 'bonds' holds indices into the model's atom array (not serials),
+      // so each neighbor is resolved via an index selection; bond length
+      // is the plain Euclidean distance in Angstroms between the two
+      // atoms' coordinates, which is exactly what the SDF stores them in.
+      var bondDetails = [];
+      var neighborIndices = atom.bonds || [];
+      for (var b = 0; b < neighborIndices.length; b++) {
+        var neighbors = viewer.selectedAtoms({ index: neighborIndices[b] });
+        var neighbor = neighbors[0];
+        if (neighbor) {
+          var dx = atom.x - neighbor.x;
+          var dy = atom.y - neighbor.y;
+          var dz = atom.z - neighbor.z;
+          bondDetails.push({
+            element: neighbor.elem,
+            order: (atom.bondOrder && atom.bondOrder[b]) || 1,
+            length: Math.sqrt(dx * dx + dy * dy + dz * dz),
+          });
+        }
+      }
+
       post({
         type: 'atomClick',
         atom: {
@@ -180,6 +203,7 @@ export function buildProteinViewerHtml(
           y: atom.y,
           z: atom.z,
           bondOrders: atom.bondOrder || [],
+          bonds: bondDetails,
         },
       });
     });
