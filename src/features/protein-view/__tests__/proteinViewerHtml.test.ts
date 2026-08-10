@@ -57,11 +57,11 @@ describe('buildProteinViewerHtml', () => {
   it('scales up the highlighted atom sphere beyond the current mode sphere scale', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
     const ballAndStickScaleMatch = html.match(/ballAndStick:\s*\{[\s\S]*?sphere:\s*\{\s*scale:\s*([\d.]+)/);
-    const highlightFactorMatch = html.match(/baseScale \* ([\d.]+)/);
+    const selectedHighlightCall = html.match(/setStyle\(\{ serial: atom\.serial \}, highlightStyleFor\(currentStyle, ([\d.]+)\)\)/);
 
     expect(ballAndStickScaleMatch).not.toBeNull();
-    expect(highlightFactorMatch).not.toBeNull();
-    expect(Number(highlightFactorMatch?.[1])).toBeGreaterThan(1);
+    expect(selectedHighlightCall).not.toBeNull();
+    expect(Number(selectedHighlightCall?.[1])).toBeGreaterThan(1);
   });
 
   it('reports a background click distinctly from an atom click, and clears the selection', () => {
@@ -113,9 +113,29 @@ describe('buildProteinViewerHtml', () => {
   it('re-applies the current mode style to a re-selected atom after switching modes, rather than reverting to ball-and-stick', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
     expect(html).toContain('function applyCurrentStyle');
-    expect(html).toContain('highlightStyleFor(currentStyle)');
+    expect(html).toContain('highlightStyleFor(currentStyle,');
     expect(html).not.toContain('var defaultStyle');
     expect(html).not.toContain('var highlightStyle');
+  });
+
+  it('highlights every atom of the same element as the selected atom, distinctly from the selected atom itself', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain("setStyle({ elem: atom.elem }, highlightStyleFor(currentStyle,");
+    expect(html).toContain('selectedElement = atom.elem');
+    const sameElementFactorMatch = html.match(/elem: atom\.elem \}, highlightStyleFor\(currentStyle, ([\d.]+)\)/);
+    const selectedFactorMatch = html.match(/serial: atom\.serial \}, highlightStyleFor\(currentStyle, ([\d.]+)\)/);
+    expect(sameElementFactorMatch).not.toBeNull();
+    expect(selectedFactorMatch).not.toBeNull();
+    expect(Number(selectedFactorMatch?.[1])).toBeGreaterThan(Number(sameElementFactorMatch?.[1]));
+    expect(Number(sameElementFactorMatch?.[1])).toBeGreaterThan(1);
+  });
+
+  it('clears both the selected atom and its same-element group back to the current style on deselect', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    const clearSelectionFnMatch = html.match(/function clearSelection\(\) \{[\s\S]*?\n {4}\}/);
+    expect(clearSelectionFnMatch).not.toBeNull();
+    expect(clearSelectionFnMatch?.[0]).toContain('setStyle({ elem: selectedElement }, currentStyle)');
+    expect(clearSelectionFnMatch?.[0]).toContain('setStyle({ serial: selectedSerial }, currentStyle)');
   });
 
   it('the glue script remains syntactically valid JS after adding mode switching', () => {
@@ -123,5 +143,21 @@ describe('buildProteinViewerHtml', () => {
     const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
     const glueScript = scripts[scripts.length - 1];
     expect(() => new Function(glueScript)).not.toThrow();
+  });
+
+  it('exposes an atom label toggle that adds a label per selected atom and clears them all when hidden', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('window.__setAtomLabelsVisible = function (visible)');
+    expect(html).toContain('viewer.removeAllLabels()');
+    expect(html).toContain('viewer.selectedAtoms({})');
+    expect(html).toContain('viewer.addLabel(atom.elem');
+    expect(html).toContain("type: 'atomLabelsVisibilityChanged'");
+  });
+
+  it('catches errors thrown while toggling atom labels and posts them back', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    const toggleFnMatch = html.match(/window\.__setAtomLabelsVisible = function \(visible\) \{[\s\S]*?\n {4}\};/);
+    expect(toggleFnMatch).not.toBeNull();
+    expect(toggleFnMatch?.[0]).toMatch(/try\s*{[\s\S]*catch/);
   });
 });
