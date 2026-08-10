@@ -28,10 +28,11 @@ export type VisualizationMode = (typeof VISUALIZATION_MODES)[number];
  * also bumps its sphere scale as a selection highlight, reverted on the
  * next tap elsewhere. `window.__setVisualizationMode` lets React Native
  * switch to the bonus space-filling/wireframe/stick models in place,
- * without re-parsing or re-adding the SDF model. threeDmolScript is
- * injected as-is (trusted, bundled asset); sdf goes through
- * JSON.stringify so any characters in it are safely escaped as a JS
- * string literal, not interpreted as HTML/script markup.
+ * without re-parsing or re-adding the SDF model, and
+ * `window.__setAtomLabelsVisible` toggles per-atom element-symbol labels.
+ * threeDmolScript is injected as-is (trusted, bundled asset); sdf goes
+ * through JSON.stringify so any characters in it are safely escaped as a
+ * JS string literal, not interpreted as HTML/script markup.
  */
 export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): string {
   return `<!DOCTYPE html>
@@ -144,6 +145,36 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
         currentStyle = STYLES[mode];
         applyCurrentStyle();
         post({ type: 'visualizationModeChanged', mode: mode });
+      } catch (error) {
+        post({ type: 'error', message: String(error && error.message ? error.message : error) });
+      }
+    };
+
+    // Invoked from React Native to toggle per-atom element-symbol labels.
+    // Labels are re-derived from the live model's atom positions each time
+    // rather than tracked from the original SDF, so they stay correct
+    // regardless of which visualization mode is active.
+    window.__setAtomLabelsVisible = function (visible) {
+      try {
+        viewer.removeAllLabels();
+        if (visible) {
+          var atoms = viewer.selectedAtoms({});
+          for (var i = 0; i < atoms.length; i++) {
+            var atom = atoms[i];
+            viewer.addLabel(atom.elem, {
+              position: { x: atom.x, y: atom.y, z: atom.z },
+              fontSize: 10,
+              fontColor: 'white',
+              backgroundColor: 'black',
+              backgroundOpacity: 0.55,
+              borderThickness: 0,
+              inFront: true,
+              showBackground: true,
+            });
+          }
+        }
+        viewer.render();
+        post({ type: 'atomLabelsVisibilityChanged', visible: !!visible });
       } catch (error) {
         post({ type: 'error', message: String(error && error.message ? error.message : error) });
       }
