@@ -29,6 +29,18 @@ export function filterLigandCodes(codes: string[], query: string): string[] {
   return codes.filter((code) => code.toLowerCase().includes(normalizedQuery));
 }
 
+export function applyFavoritesFilter(
+  codes: string[],
+  favorites: ReadonlySet<string>,
+  onlyFavorites: boolean
+): string[] {
+  if (!onlyFavorites) {
+    return codes;
+  }
+
+  return codes.filter((code) => favorites.has(code));
+}
+
 export async function loadLigandCodes(): Promise<string[]> {
   const asset = Asset.fromModule(ligandsListAsset);
   await asset.downloadAsync();
