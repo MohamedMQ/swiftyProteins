@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   ListRenderItemInfo,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -18,7 +20,8 @@ import {
   type LigandFetchError,
 } from '../../core/networking/ligandFetchError';
 import { fetchLigandCif } from '../../core/networking/ligandService';
-import { filterLigandCodes } from '../../core/persistence/ligandRepository';
+import { loadFavoriteCodes, saveFavoriteCodes } from '../../core/persistence/favoritesRepository';
+import { applyFavoritesFilter, filterLigandCodes } from '../../core/persistence/ligandRepository';
 import { AlertCard, theme } from '../../design-system';
 import { LIGAND_ROW_HEIGHT, LigandRow } from './LigandRow';
 
@@ -43,12 +46,39 @@ export function LigandListScreen({ codes, onLigandLoaded }: LigandListScreenProp
   const [fetchError, setFetchError] = useState<{ code: string; error: LigandFetchError } | null>(
     null
   );
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
   const filteredCodes = useMemo(
-    () => filterLigandCodes(codes, debouncedQuery),
-    [codes, debouncedQuery]
+    () => applyFavoritesFilter(filterLigandCodes(codes, debouncedQuery), favorites, showFavoritesOnly),
+    [codes, debouncedQuery, favorites, showFavoritesOnly]
   );
   const trimmedQuery = debouncedQuery.trim();
+
+  useEffect(() => {
+    let cancelled = false;
+    loadFavoriteCodes().then((loaded) => {
+      if (!cancelled) {
+        setFavorites(loaded);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleToggleFavorite = useCallback((code: string) => {
+    setFavorites((previous) => {
+      const next = new Set(previous);
+      if (next.has(code)) {
+        next.delete(code);
+      } else {
+        next.add(code);
+      }
+      saveFavoriteCodes(next);
+      return next;
+    });
+  }, []);
 
   const handleSelectLigand = useCallback(
     async (code: string) => {
@@ -72,9 +102,14 @@ export function LigandListScreen({ codes, onLigandLoaded }: LigandListScreenProp
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<string>) => (
-      <LigandRow code={item} onPress={handleSelectLigand} />
+      <LigandRow
+        code={item}
+        isFavorite={favorites.has(item)}
+        onPress={handleSelectLigand}
+        onToggleFavorite={handleToggleFavorite}
+      />
     ),
-    [handleSelectLigand]
+    [handleSelectLigand, handleToggleFavorite, favorites]
   );
 
   return (
@@ -83,21 +118,36 @@ export function LigandListScreen({ codes, onLigandLoaded }: LigandListScreenProp
         Ligands
       </Text>
 
-      <View style={styles.searchBar}>
-        <Text style={styles.searchIcon} importantForAccessibility="no">
-          ⌕
-        </Text>
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder={`Search ${codes.length.toLocaleString()} ligands`}
-          placeholderTextColor={theme.colors.textTertiary}
-          style={styles.searchInput}
-          autoCapitalize="none"
-          autoCorrect={false}
-          accessibilityLabel="Search ligands"
-          accessibilityHint="Filters the ligand list as you type"
-        />
+      <View style={styles.searchRow}>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon} importantForAccessibility="no">
+            ⌕
+          </Text>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder={`Search ${codes.length.toLocaleString()} ligands`}
+            placeholderTextColor={theme.colors.textTertiary}
+            style={styles.searchInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel="Search ligands"
+            accessibilityHint="Filters the ligand list as you type"
+          />
+        </View>
+        <Pressable
+          onPress={() => setShowFavoritesOnly((previous) => !previous)}
+          style={styles.favoritesToggle}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: showFavoritesOnly }}
+          accessibilityLabel="Show favorites only"
+        >
+          <Ionicons
+            name={showFavoritesOnly ? 'star' : 'star-outline'}
+            size={20}
+            color={showFavoritesOnly ? theme.colors.accent : theme.colors.textSecondary}
+          />
+        </Pressable>
       </View>
 
       <View style={styles.listContainer}>
@@ -114,7 +164,9 @@ export function LigandListScreen({ codes, onLigandLoaded }: LigandListScreenProp
           ListEmptyComponent={
             <View style={styles.emptyState} accessible accessibilityRole="text">
               <Text style={styles.emptyTitle}>
-                {trimmedQuery.length > 0
+                {showFavoritesOnly && trimmedQuery.length === 0
+                  ? 'No favorites yet'
+                  : trimmedQuery.length > 0
                   ? `No ligands match "${trimmedQuery}"`
                   : 'No ligands available'}
               </Text>
@@ -164,12 +216,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
     paddingBottom: theme.spacing.md,
   },
-  searchBar: {
+  searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
     marginHorizontal: theme.spacing.xl,
     marginBottom: theme.spacing.md,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.colors.border,
@@ -186,6 +244,16 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.body,
     color: theme.colors.textPrimary,
     padding: 0,
+  },
+  favoritesToggle: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listContainer: {
     flex: 1,

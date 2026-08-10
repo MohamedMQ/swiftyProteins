@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { memo, useMemo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { Circle, Line, Svg } from 'react-native-svg';
@@ -6,7 +7,9 @@ import { getMoleculeGlyph, MOLECULE_GLYPH_BOND_COLOR, theme } from '../../design
 
 interface LigandRowProps {
   code: string;
+  isFavorite?: boolean;
   onPress?: (code: string) => void;
+  onToggleFavorite?: (code: string) => void;
 }
 
 const AVATAR_SIZE = 36;
@@ -17,7 +20,7 @@ const AVATAR_SIZE = 36;
 export const LIGAND_ROW_HEIGHT =
   AVATAR_SIZE + theme.spacing.md * 2 + StyleSheet.hairlineWidth;
 
-function LigandRowComponent({ code, onPress }: LigandRowProps) {
+function LigandRowComponent({ code, isFavorite = false, onPress, onToggleFavorite }: LigandRowProps) {
   const glyph = useMemo(() => getMoleculeGlyph(code), [code]);
 
   return (
@@ -46,6 +49,21 @@ function LigandRowComponent({ code, onPress }: LigandRowProps) {
         <Circle cx={glyph.hub.x} cy={glyph.hub.y} r={glyph.hub.radius} fill={glyph.hub.color} />
       </Svg>
       <Text style={styles.code}>{code}</Text>
+      {onToggleFavorite && (
+        <Pressable
+          onPress={() => onToggleFavorite(code)}
+          hitSlop={8}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: isFavorite }}
+          accessibilityLabel={isFavorite ? `Remove ${code} from favorites` : `Add ${code} to favorites`}
+        >
+          <Ionicons
+            name={isFavorite ? 'star' : 'star-outline'}
+            size={20}
+            color={isFavorite ? theme.colors.accent : theme.colors.textQuaternary}
+          />
+        </Pressable>
+      )}
     </Pressable>
   );
 }
@@ -66,6 +84,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   code: {
+    flex: 1,
     fontSize: theme.fontSize.body,
     fontWeight: theme.fontWeight.medium,
     color: theme.colors.textPrimary,
