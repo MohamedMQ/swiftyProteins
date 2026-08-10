@@ -38,9 +38,10 @@ function getItemLayout(_: ArrayLike<string> | null | undefined, index: number) {
 interface LigandListScreenProps {
   codes: string[];
   onLigandLoaded: (code: string, raw: string) => void;
+  onOpenSettings: () => void;
 }
 
-export function LigandListScreen({ codes, onLigandLoaded }: LigandListScreenProps) {
+export function LigandListScreen({ codes, onLigandLoaded, onOpenSettings }: LigandListScreenProps) {
   const [query, setQuery] = useState('');
   const [loadingCode, setLoadingCode] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<{ code: string; error: LigandFetchError } | null>(
@@ -114,9 +115,19 @@ export function LigandListScreen({ codes, onLigandLoaded }: LigandListScreenProp
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <Text style={styles.header} accessibilityRole="header">
-        Ligands
-      </Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.header} accessibilityRole="header">
+          Ligands
+        </Text>
+        <Pressable
+          onPress={onOpenSettings}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+        >
+          <Ionicons name="settings-outline" size={22} color={theme.colors.textSecondary} />
+        </Pressable>
+      </View>
 
       <View style={styles.searchRow}>
         <View style={styles.searchBar}>
@@ -209,12 +220,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     paddingTop: theme.spacing.lg,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: theme.spacing.md,
+  },
   header: {
     fontSize: theme.fontSize.heading,
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.textPrimary,
-    paddingHorizontal: theme.spacing.xl,
-    paddingBottom: theme.spacing.md,
   },
   searchRow: {
     flexDirection: 'row',

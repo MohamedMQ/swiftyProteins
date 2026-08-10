@@ -1,3 +1,7 @@
+import { VISUALIZATION_MODES, type VisualizationMode } from '../../core/viewer/visualizationMode';
+
+export { VISUALIZATION_MODES, type VisualizationMode };
+
 const BACKGROUND_COLOR = '#0E1116';
 // Matches the proportions tuned in the earlier native ball-and-stick
 // renderer: covalent-radius-scaled spheres, sticks thinner than any atom.
@@ -23,9 +27,6 @@ const SAME_ELEMENT_HIGHLIGHT_SCALE_FACTOR = 1.15;
 const DOUBLE_TAP_MAX_INTERVAL_MS = 350;
 const CENTER_ON_ATOM_ANIMATION_MS = 400;
 
-export const VISUALIZATION_MODES = ['ballAndStick', 'spaceFilling', 'wireframe', 'stick'] as const;
-export type VisualizationMode = (typeof VISUALIZATION_MODES)[number];
-
 /**
  * Builds a self-contained HTML page: 3Dmol.js inlined directly (no CDN
  * dependency at runtime), fed the given SDF, styled ball-and-stick by
@@ -39,11 +40,26 @@ export type VisualizationMode = (typeof VISUALIZATION_MODES)[number];
  * switch to the bonus space-filling/wireframe/stick models in place,
  * without re-parsing or re-adding the SDF model, and
  * `window.__setAtomLabelsVisible` toggles per-atom element-symbol labels.
+ * `options` seeds the initial visualization mode and label visibility
+ * (from the user's saved preferences) so the viewer opens directly in the
+ * right state instead of flashing the hardcoded defaults first.
  * threeDmolScript is injected as-is (trusted, bundled asset); sdf goes
  * through JSON.stringify so any characters in it are safely escaped as a
  * JS string literal, not interpreted as HTML/script markup.
  */
-export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): string {
+export interface ProteinViewerHtmlOptions {
+  initialVisualizationMode?: VisualizationMode;
+  initialAtomLabelsVisible?: boolean;
+}
+
+export function buildProteinViewerHtml(
+  threeDmolScript: string,
+  sdf: string,
+  options: ProteinViewerHtmlOptions = {}
+): string {
+  const initialMode = options.initialVisualizationMode ?? 'ballAndStick';
+  const initialAtomLabelsVisible = options.initialAtomLabelsVisible ?? false;
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -85,7 +101,7 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
         stick: { radius: ${STICK_RADIUS}, colorscheme: 'Jmol' },
       },
     };
-    var currentStyle = STYLES.ballAndStick;
+    var currentStyle = STYLES[${JSON.stringify(initialMode)}] || STYLES.ballAndStick;
     var selectedSerial = null;
     var selectedElement = null;
     var lastAtomClickAt = 0;
@@ -192,30 +208,34 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
       }
     };
 
-    // Invoked from React Native to toggle per-atom element-symbol labels.
     // Labels are re-derived from the live model's atom positions each time
     // rather than tracked from the original SDF, so they stay correct
     // regardless of which visualization mode is active.
+    function setAtomLabelsVisible(visible) {
+      viewer.removeAllLabels();
+      if (visible) {
+        var atoms = viewer.selectedAtoms({});
+        for (var i = 0; i < atoms.length; i++) {
+          var atom = atoms[i];
+          viewer.addLabel(atom.elem, {
+            position: { x: atom.x, y: atom.y, z: atom.z },
+            fontSize: 10,
+            fontColor: 'white',
+            backgroundColor: 'black',
+            backgroundOpacity: 0.55,
+            borderThickness: 0,
+            inFront: true,
+            showBackground: true,
+          });
+        }
+      }
+      viewer.render();
+    }
+
+    // Invoked from React Native to toggle per-atom element-symbol labels.
     window.__setAtomLabelsVisible = function (visible) {
       try {
-        viewer.removeAllLabels();
-        if (visible) {
-          var atoms = viewer.selectedAtoms({});
-          for (var i = 0; i < atoms.length; i++) {
-            var atom = atoms[i];
-            viewer.addLabel(atom.elem, {
-              position: { x: atom.x, y: atom.y, z: atom.z },
-              fontSize: 10,
-              fontColor: 'white',
-              backgroundColor: 'black',
-              backgroundOpacity: 0.55,
-              borderThickness: 0,
-              inFront: true,
-              showBackground: true,
-            });
-          }
-        }
-        viewer.render();
+        setAtomLabelsVisible(visible);
         post({ type: 'atomLabelsVisibilityChanged', visible: !!visible });
       } catch (error) {
         post({ type: 'error', message: String(error && error.message ? error.message : error) });
@@ -224,6 +244,10 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
 
     viewer.zoomTo();
     viewer.render();
+
+    if (${JSON.stringify(initialAtomLabelsVisible)}) {
+      setAtomLabelsVisible(true);
+    }
 
     // Invoked from React Native via injectJavaScript to capture the
     // current view for sharing — pngURI() reads directly from the

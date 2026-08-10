@@ -11,13 +11,21 @@ import { VisualizationModeSwitcher } from './VisualizationModeSwitcher';
 interface ProteinViewScreenProps {
   code: string;
   raw: string;
+  initialVisualizationMode: VisualizationMode;
+  initialAtomLabelsVisible: boolean;
   onBack: () => void;
 }
 
-export function ProteinViewScreen({ code, raw, onBack }: ProteinViewScreenProps) {
+export function ProteinViewScreen({
+  code,
+  raw,
+  initialVisualizationMode,
+  initialAtomLabelsVisible,
+  onBack,
+}: ProteinViewScreenProps) {
   const webviewRef = useRef<ProteinWebViewHandle>(null);
-  const [mode, setMode] = useState<VisualizationMode>('ballAndStick');
-  const [labelsVisible, setLabelsVisible] = useState(false);
+  const [mode, setMode] = useState<VisualizationMode>(initialVisualizationMode);
+  const [labelsVisible, setLabelsVisible] = useState(initialAtomLabelsVisible);
 
   function handleModeChange(nextMode: VisualizationMode) {
     setMode(nextMode);
@@ -70,7 +78,13 @@ export function ProteinViewScreen({ code, raw, onBack }: ProteinViewScreenProps)
         </Pressable>
       </View>
 
-      <ProteinWebView ref={webviewRef} code={code} raw={raw} />
+      <ProteinWebView
+        ref={webviewRef}
+        code={code}
+        raw={raw}
+        initialVisualizationMode={initialVisualizationMode}
+        initialAtomLabelsVisible={initialAtomLabelsVisible}
+      />
     </SafeAreaView>
   );
 }

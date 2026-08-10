@@ -14,6 +14,8 @@ import { buildProteinViewerHtml, type VisualizationMode } from './proteinViewerH
 interface ProteinWebViewProps {
   code: string;
   raw: string;
+  initialVisualizationMode?: VisualizationMode;
+  initialAtomLabelsVisible?: boolean;
 }
 
 export interface ProteinWebViewHandle {
@@ -45,7 +47,7 @@ const SNAPSHOT_DATA_URI_PREFIX = 'data:image/png;base64,';
  * the 3Dmol template) and bridging its postMessage events back out.
  */
 export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewProps>(function ProteinWebView(
-  { code, raw },
+  { code, raw, initialVisualizationMode, initialAtomLabelsVisible },
   ref,
 ) {
   const [html, setHtml] = useState<string | null>(null);
@@ -62,7 +64,12 @@ export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewPro
         const sdf = moleculeToSdf(molecule, code);
         const script = await load3DmolScript();
         if (!cancelled) {
-          setHtml(buildProteinViewerHtml(script, sdf));
+          setHtml(
+            buildProteinViewerHtml(script, sdf, {
+              initialVisualizationMode,
+              initialAtomLabelsVisible,
+            })
+          );
         }
       } catch (error) {
         if (!cancelled) {
@@ -74,6 +81,11 @@ export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewPro
     return () => {
       cancelled = true;
     };
+    // initialVisualizationMode/initialAtomLabelsVisible are deliberately
+    // excluded from the dependency list — they only seed the WebView's
+    // starting state and shouldn't trigger a full HTML rebuild (and thus
+    // a visible re-render of the viewer) when the user changes them live
+    // via the switcher/toggle in this same screen.
   }, [raw, code]);
 
   useImperativeHandle(ref, () => ({

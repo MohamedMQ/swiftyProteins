@@ -152,6 +152,22 @@ describe('buildProteinViewerHtml', () => {
     expect(html).toContain('viewer.center({ serial: atom.serial },');
   });
 
+  it('defaults to ball-and-stick with labels hidden when no options are given', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('STYLES["ballAndStick"] || STYLES.ballAndStick');
+    expect(html).toContain('if (false) {\n      setAtomLabelsVisible(true);\n    }');
+  });
+
+  it('seeds the initial visualization mode from options instead of always starting ball-and-stick', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF', { initialVisualizationMode: 'spaceFilling' });
+    expect(html).toContain('STYLES["spaceFilling"] || STYLES.ballAndStick');
+  });
+
+  it('shows atom labels immediately on load when initialAtomLabelsVisible is true', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF', { initialAtomLabelsVisible: true });
+    expect(html).toContain('if (true) {\n      setAtomLabelsVisible(true);\n    }');
+  });
+
   it('exposes an atom label toggle that adds a label per selected atom and clears them all when hidden', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
     expect(html).toContain('window.__setAtomLabelsVisible = function (visible)');
