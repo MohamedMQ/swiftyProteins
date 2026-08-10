@@ -39,6 +39,7 @@ export function VisualizationModeSwitcher({ mode, onChange }: VisualizationModeS
 
 const styles = StyleSheet.create({
   wrapper: {
+    flex: 1,
     flexDirection: 'row',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.pill,

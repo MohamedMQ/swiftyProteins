@@ -19,10 +19,18 @@ interface ProteinWebViewProps {
 export interface ProteinWebViewHandle {
   requestSnapshot: () => void;
   setVisualizationMode: (mode: VisualizationMode) => void;
+  setAtomLabelsVisible: (visible: boolean) => void;
 }
 
 interface ViewerMessage {
-  type: 'ready' | 'error' | 'atomClick' | 'backgroundClick' | 'snapshot' | 'visualizationModeChanged';
+  type:
+    | 'ready'
+    | 'error'
+    | 'atomClick'
+    | 'backgroundClick'
+    | 'snapshot'
+    | 'visualizationModeChanged'
+    | 'atomLabelsVisibilityChanged';
   message?: string;
   dataUri?: string;
   atom?: { id: number; element: string; x: number; y: number; z: number; bondOrders: number[] };
@@ -74,6 +82,9 @@ export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewPro
     },
     setVisualizationMode(mode: VisualizationMode) {
       webviewRef.current?.injectJavaScript(`window.__setVisualizationMode(${JSON.stringify(mode)}); true;`);
+    },
+    setAtomLabelsVisible(visible: boolean) {
+      webviewRef.current?.injectJavaScript(`window.__setAtomLabelsVisible(${JSON.stringify(visible)}); true;`);
     },
   }));
 

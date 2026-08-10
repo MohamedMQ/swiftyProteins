@@ -17,10 +17,17 @@ interface ProteinViewScreenProps {
 export function ProteinViewScreen({ code, raw, onBack }: ProteinViewScreenProps) {
   const webviewRef = useRef<ProteinWebViewHandle>(null);
   const [mode, setMode] = useState<VisualizationMode>('ballAndStick');
+  const [labelsVisible, setLabelsVisible] = useState(false);
 
   function handleModeChange(nextMode: VisualizationMode) {
     setMode(nextMode);
     webviewRef.current?.setVisualizationMode(nextMode);
+  }
+
+  function toggleLabels() {
+    const next = !labelsVisible;
+    setLabelsVisible(next);
+    webviewRef.current?.setAtomLabelsVisible(next);
   }
 
   return (
@@ -47,6 +54,20 @@ export function ProteinViewScreen({ code, raw, onBack }: ProteinViewScreenProps)
 
       <View style={styles.switcherRow}>
         <VisualizationModeSwitcher mode={mode} onChange={handleModeChange} />
+        <Pressable
+          onPress={toggleLabels}
+          hitSlop={8}
+          style={styles.labelsToggle}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: labelsVisible }}
+          accessibilityLabel="Toggle atom element labels"
+        >
+          <Ionicons
+            name={labelsVisible ? 'text' : 'text-outline'}
+            size={20}
+            color={labelsVisible ? theme.colors.accent : theme.colors.textSecondary}
+          />
+        </Pressable>
       </View>
 
       <ProteinWebView ref={webviewRef} code={code} raw={raw} />
@@ -72,7 +93,20 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   switcherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.sm,
+  },
+  labelsToggle: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
