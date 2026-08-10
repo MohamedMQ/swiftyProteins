@@ -114,7 +114,7 @@ export function LigandListScreen({ codes, onLigandLoaded, onOpenSettings }: Liga
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.headerRow}>
         <Text style={styles.header} accessibilityRole="header">
           Ligands

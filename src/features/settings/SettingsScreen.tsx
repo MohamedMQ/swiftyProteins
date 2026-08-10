@@ -14,7 +14,7 @@ interface SettingsScreenProps {
 
 export function SettingsScreen({ preferences, onChange, onBack }: SettingsScreenProps) {
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.header}>
         <Pressable
           onPress={onBack}

@@ -83,66 +83,68 @@ export function LoginScreen({ onAuthenticated, onNavigateToSignUp }: LoginScreen
   const canSubmit = username.length > 0 && password.length > 0;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Image
-          source={require('../../../assets/splash-icon.png')}
-          style={styles.mark}
-          resizeMode="contain"
-        />
+        <View style={styles.formWidth}>
+          <Image
+            source={require('../../../assets/splash-icon.png')}
+            style={styles.mark}
+            resizeMode="contain"
+          />
 
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Sign in to view ligands</Text>
+          <Text style={styles.title}>Welcome back</Text>
+          <Text style={styles.subtitle}>Sign in to view ligands</Text>
 
-        <TextField
-          label="Username"
-          placeholder="Enter your username"
-          value={username}
-          onChangeText={handleUsernameChange}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+          <TextField
+            label="Username"
+            placeholder="Enter your username"
+            value={username}
+            onChangeText={handleUsernameChange}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
 
-        <TextField
-          label="Password"
-          placeholder="Enter your password"
-          value={password}
-          onChangeText={handlePasswordChange}
-          secureTextEntry
-          autoCapitalize="none"
-        />
+          <TextField
+            label="Password"
+            placeholder="Enter your password"
+            value={password}
+            onChangeText={handlePasswordChange}
+            secureTextEntry
+            autoCapitalize="none"
+          />
 
-        {formError !== null && <Text style={styles.error}>{formError}</Text>}
+          {formError !== null && <Text style={styles.error}>{formError}</Text>}
 
-        <PrimaryButton
-          label="Log in"
-          onPress={handleSubmit}
-          loading={submitting}
-          disabled={!canSubmit}
-        />
+          <PrimaryButton
+            label="Log in"
+            onPress={handleSubmit}
+            loading={submitting}
+            disabled={!canSubmit}
+          />
 
-        {biometricLabel !== null && (
-          <>
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
+          {biometricLabel !== null && (
+            <>
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
 
-            <Pressable style={styles.biometricButton} onPress={handleBiometricLogin}>
-              <Text style={styles.biometricLabel}>{biometricLabel}</Text>
+              <Pressable style={styles.biometricButton} onPress={handleBiometricLogin}>
+                <Text style={styles.biometricLabel}>{biometricLabel}</Text>
+              </Pressable>
+            </>
+          )}
+
+          <View style={styles.footer}>
+            <Pressable onPress={onNavigateToSignUp} hitSlop={8}>
+              <Text style={styles.link}>Create an account</Text>
             </Pressable>
-          </>
-        )}
-
-        <View style={styles.footer}>
-          <Pressable onPress={onNavigateToSignUp} hitSlop={8}>
-            <Text style={styles.link}>Create an account</Text>
-          </Pressable>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -157,7 +159,13 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     justifyContent: 'center',
+    alignItems: 'stretch',
     padding: theme.spacing.xl,
+  },
+  formWidth: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
   },
   mark: {
     width: 56,

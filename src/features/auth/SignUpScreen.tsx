@@ -76,7 +76,7 @@ export function SignUpScreen({ onRegistered, onNavigateToLogin }: SignUpScreenPr
   const canSubmit = username.length > 0 && password.length > 0 && confirmPassword.length > 0;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <Pressable
         onPress={onNavigateToLogin}
         hitSlop={8}
@@ -92,70 +92,72 @@ export function SignUpScreen({ onRegistered, onNavigateToLogin }: SignUpScreenPr
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Image
-          source={require('../../../assets/splash-icon.png')}
-          style={styles.mark}
-          resizeMode="contain"
-        />
+        <View style={styles.formWidth}>
+          <Image
+            source={require('../../../assets/splash-icon.png')}
+            style={styles.mark}
+            resizeMode="contain"
+          />
 
-        <Text style={styles.title}>Create account</Text>
-        <Text style={styles.subtitle}>Stored securely on your device</Text>
+          <Text style={styles.title}>Create account</Text>
+          <Text style={styles.subtitle}>Stored securely on your device</Text>
 
-        <TextField
-          label="Username"
-          placeholder="Choose a username"
-          value={username}
-          onChangeText={handleUsernameChange}
-          onBlur={() => setUsernameTouched(true)}
-          errorText={usernameTouched ? usernameErrors[0] : undefined}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+          <TextField
+            label="Username"
+            placeholder="Choose a username"
+            value={username}
+            onChangeText={handleUsernameChange}
+            onBlur={() => setUsernameTouched(true)}
+            errorText={usernameTouched ? usernameErrors[0] : undefined}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
 
-        <TextField
-          label="Password"
-          placeholder="Choose a password"
-          value={password}
-          onChangeText={handlePasswordChange}
-          secureTextEntry
-          autoCapitalize="none"
-        />
+          <TextField
+            label="Password"
+            placeholder="Choose a password"
+            value={password}
+            onChangeText={handlePasswordChange}
+            secureTextEntry
+            autoCapitalize="none"
+          />
 
-        {password.length > 0 && (
-          <View style={styles.strength}>
-            <View style={styles.strengthBars}>
-              {Array.from({ length: PASSWORD_RULE_COUNT }).map((_, index) => (
-                <View
-                  key={index}
-                  style={[styles.strengthBar, index < passedRuleCount && styles.strengthBarFilled]}
-                />
-              ))}
+          {password.length > 0 && (
+            <View style={styles.strength}>
+              <View style={styles.strengthBars}>
+                {Array.from({ length: PASSWORD_RULE_COUNT }).map((_, index) => (
+                  <View
+                    key={index}
+                    style={[styles.strengthBar, index < passedRuleCount && styles.strengthBarFilled]}
+                  />
+                ))}
+              </View>
+              <Text style={styles.strengthLabel}>
+                {strengthLabel}
+                {passwordErrors.length > 0 ? ` — ${passwordErrors.join(', ')}` : ''}
+              </Text>
             </View>
-            <Text style={styles.strengthLabel}>
-              {strengthLabel}
-              {passwordErrors.length > 0 ? ` — ${passwordErrors.join(', ')}` : ''}
-            </Text>
-          </View>
-        )}
+          )}
 
-        <TextField
-          label="Confirm password"
-          placeholder="Re-enter your password"
-          value={confirmPassword}
-          onChangeText={handleConfirmPasswordChange}
-          errorText={confirmError}
-          secureTextEntry
-          autoCapitalize="none"
-        />
+          <TextField
+            label="Confirm password"
+            placeholder="Re-enter your password"
+            value={confirmPassword}
+            onChangeText={handleConfirmPasswordChange}
+            errorText={confirmError}
+            secureTextEntry
+            autoCapitalize="none"
+          />
 
-        {formError !== null && <Text style={styles.error}>{formError}</Text>}
+          {formError !== null && <Text style={styles.error}>{formError}</Text>}
 
-        <PrimaryButton
-          label="Create account"
-          onPress={handleSubmit}
-          loading={submitting}
-          disabled={!canSubmit}
-        />
+          <PrimaryButton
+            label="Create account"
+            onPress={handleSubmit}
+            loading={submitting}
+            disabled={!canSubmit}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -174,8 +176,14 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     justifyContent: 'center',
+    alignItems: 'stretch',
     padding: theme.spacing.xl,
     paddingTop: theme.spacing.md,
+  },
+  formWidth: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
   },
   mark: {
     width: 48,
