@@ -15,6 +15,10 @@ const SPACE_FILLING_SCALE = 1.0;
 // Wireframe and stick modes have no sphere of their own to scale up for a
 // selection highlight, so the highlight sphere falls back to this size.
 const HIGHLIGHT_FALLBACK_SPHERE_SCALE = 0.3;
+// Every other atom sharing the selected atom's element gets a smaller bump
+// than the selected atom itself, so the selection stays visually distinct
+// from the rest of the same-element group it's highlighting.
+const SAME_ELEMENT_HIGHLIGHT_SCALE_FACTOR = 1.15;
 
 export const VISUALIZATION_MODES = ['ballAndStick', 'spaceFilling', 'wireframe', 'stick'] as const;
 export type VisualizationMode = (typeof VISUALIZATION_MODES)[number];
@@ -25,8 +29,9 @@ export type VisualizationMode = (typeof VISUALIZATION_MODES)[number];
  * default with the Jmol color scheme (the same standard CPK colors the
  * subject asks for), and wired to post messages back to React Native for
  * readiness, atom taps, and background taps (dismiss). Tapping an atom
- * also bumps its sphere scale as a selection highlight, reverted on the
- * next tap elsewhere. `window.__setVisualizationMode` lets React Native
+ * bumps its sphere scale as a selection highlight and also gives every
+ * other atom of the same element a smaller highlight bump, both reverted
+ * on the next tap elsewhere. `window.__setVisualizationMode` lets React Native
  * switch to the bonus space-filling/wireframe/stick models in place,
  * without re-parsing or re-adding the SDF model, and
  * `window.__setAtomLabelsVisible` toggles per-atom element-symbol labels.
@@ -78,27 +83,40 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
     };
     var currentStyle = STYLES.ballAndStick;
     var selectedSerial = null;
+    var selectedElement = null;
     var lastAtomClickAt = 0;
 
-    function highlightStyleFor(style) {
+    function highlightStyleFor(style, scaleFactor) {
       var baseScale = (style.sphere && style.sphere.scale) || ${HIGHLIGHT_FALLBACK_SPHERE_SCALE};
       var highlighted = JSON.parse(JSON.stringify(style));
-      highlighted.sphere = { scale: baseScale * ${HIGHLIGHT_SCALE_FACTOR}, colorscheme: 'Jmol' };
+      highlighted.sphere = { scale: baseScale * scaleFactor, colorscheme: 'Jmol' };
       return highlighted;
     }
 
     function clearSelection() {
       if (selectedSerial !== null) {
-        viewer.setStyle({ serial: selectedSerial }, currentStyle);
+        if (selectedElement !== null) {
+          viewer.setStyle({ elem: selectedElement }, currentStyle);
+        } else {
+          viewer.setStyle({ serial: selectedSerial }, currentStyle);
+        }
         selectedSerial = null;
+        selectedElement = null;
       }
     }
 
     function applyCurrentStyle() {
-      var previousSelected = selectedSerial;
+      var previousSelectedSerial = selectedSerial;
+      var previousSelectedElement = selectedElement;
       viewer.setStyle({}, currentStyle);
-      if (previousSelected !== null) {
-        viewer.setStyle({ serial: previousSelected }, highlightStyleFor(currentStyle));
+      if (previousSelectedSerial !== null) {
+        if (previousSelectedElement !== null) {
+          viewer.setStyle(
+            { elem: previousSelectedElement },
+            highlightStyleFor(currentStyle, ${SAME_ELEMENT_HIGHLIGHT_SCALE_FACTOR})
+          );
+        }
+        viewer.setStyle({ serial: previousSelectedSerial }, highlightStyleFor(currentStyle, ${HIGHLIGHT_SCALE_FACTOR}));
       }
       viewer.render();
     }
@@ -109,8 +127,14 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
     viewer.setClickable({}, true, function (atom) {
       lastAtomClickAt = Date.now();
       clearSelection();
-      viewer.setStyle({ serial: atom.serial }, highlightStyleFor(currentStyle));
+      // Highlight every atom of this element first (the bonus "atom
+      // highlighting" feature), then re-apply the stronger single-atom
+      // highlight on top so the actually-selected atom still stands out
+      // from the rest of its element group.
+      viewer.setStyle({ elem: atom.elem }, highlightStyleFor(currentStyle, ${SAME_ELEMENT_HIGHLIGHT_SCALE_FACTOR}));
+      viewer.setStyle({ serial: atom.serial }, highlightStyleFor(currentStyle, ${HIGHLIGHT_SCALE_FACTOR}));
       selectedSerial = atom.serial;
+      selectedElement = atom.elem;
       viewer.render();
 
       post({
