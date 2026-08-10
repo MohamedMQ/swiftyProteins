@@ -145,6 +145,13 @@ describe('buildProteinViewerHtml', () => {
     expect(() => new Function(glueScript)).not.toThrow();
   });
 
+  it('re-centers the camera on an atom only when the same atom is tapped twice within the double-tap window', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('lastAtomTapSerial === atom.serial && tapAt - lastAtomTapAt <=');
+    expect(html).toContain('if (isDoubleTap)');
+    expect(html).toContain('viewer.center({ serial: atom.serial },');
+  });
+
   it('exposes an atom label toggle that adds a label per selected atom and clears them all when hidden', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
     expect(html).toContain('window.__setAtomLabelsVisible = function (visible)');

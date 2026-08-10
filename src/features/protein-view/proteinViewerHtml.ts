@@ -19,6 +19,9 @@ const HIGHLIGHT_FALLBACK_SPHERE_SCALE = 0.3;
 // than the selected atom itself, so the selection stays visually distinct
 // from the rest of the same-element group it's highlighting.
 const SAME_ELEMENT_HIGHLIGHT_SCALE_FACTOR = 1.15;
+// Two taps on the same atom within this window count as a double-tap.
+const DOUBLE_TAP_MAX_INTERVAL_MS = 350;
+const CENTER_ON_ATOM_ANIMATION_MS = 400;
 
 export const VISUALIZATION_MODES = ['ballAndStick', 'spaceFilling', 'wireframe', 'stick'] as const;
 export type VisualizationMode = (typeof VISUALIZATION_MODES)[number];
@@ -31,7 +34,8 @@ export type VisualizationMode = (typeof VISUALIZATION_MODES)[number];
  * readiness, atom taps, and background taps (dismiss). Tapping an atom
  * bumps its sphere scale as a selection highlight and also gives every
  * other atom of the same element a smaller highlight bump, both reverted
- * on the next tap elsewhere. `window.__setVisualizationMode` lets React Native
+ * on the next tap elsewhere; double-tapping the same atom re-centers the
+ * camera on it. `window.__setVisualizationMode` lets React Native
  * switch to the bonus space-filling/wireframe/stick models in place,
  * without re-parsing or re-adding the SDF model, and
  * `window.__setAtomLabelsVisible` toggles per-atom element-symbol labels.
@@ -85,6 +89,8 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
     var selectedSerial = null;
     var selectedElement = null;
     var lastAtomClickAt = 0;
+    var lastAtomTapSerial = null;
+    var lastAtomTapAt = 0;
 
     function highlightStyleFor(style, scaleFactor) {
       var baseScale = (style.sphere && style.sphere.scale) || ${HIGHLIGHT_FALLBACK_SPHERE_SCALE};
@@ -125,7 +131,13 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
     applyCurrentStyle();
 
     viewer.setClickable({}, true, function (atom) {
-      lastAtomClickAt = Date.now();
+      var tapAt = Date.now();
+      var isDoubleTap =
+        lastAtomTapSerial === atom.serial && tapAt - lastAtomTapAt <= ${DOUBLE_TAP_MAX_INTERVAL_MS};
+      lastAtomTapSerial = atom.serial;
+      lastAtomTapAt = tapAt;
+      lastAtomClickAt = tapAt;
+
       clearSelection();
       // Highlight every atom of this element first (the bonus "atom
       // highlighting" feature), then re-apply the stronger single-atom
@@ -136,6 +148,12 @@ export function buildProteinViewerHtml(threeDmolScript: string, sdf: string): st
       selectedSerial = atom.serial;
       selectedElement = atom.elem;
       viewer.render();
+
+      // Double-tapping the same atom re-centers the camera on it (does
+      // not change zoom level, unlike zoomTo) with a smooth animation.
+      if (isDoubleTap) {
+        viewer.center({ serial: atom.serial }, ${CENTER_ON_ATOM_ANIMATION_MS});
+      }
 
       post({
         type: 'atomClick',
