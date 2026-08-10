@@ -161,6 +161,31 @@ describe('buildProteinViewerHtml', () => {
     expect(html).toContain('viewer.center({ serial: atom.serial },');
   });
 
+  it('exposes a measure-mode toggle that resets pending picks and clears drawn artifacts', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('window.__setMeasureModeEnabled = function (enabled)');
+    expect(html).toContain('measureModeEnabled = !!enabled');
+    expect(html).toContain('clearMeasurementArtifacts()');
+    expect(html).toContain("post({ type: 'measureModeChanged', enabled: measureModeEnabled })");
+  });
+
+  it('in measure mode, the first atom tap picks a point and the second draws a line and posts the distance', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain("post({ type: 'measurePointSelected', element: atom.elem })");
+    expect(html).toContain('viewer.addLine({');
+    expect(html).toContain("type: 'measurementResult'");
+    expect(html).toContain('fromElement: first.elem');
+    expect(html).toContain('toElement: atom.elem');
+  });
+
+  it('tapping the same pending atom again in measure mode cancels the pick instead of measuring against itself', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('if (measurePendingSerial === atom.serial)');
+    const cancelBranchMatch = html.match(/if \(measurePendingSerial === atom\.serial\) \{[\s\S]*?\n {8}\}/);
+    expect(cancelBranchMatch).not.toBeNull();
+    expect(cancelBranchMatch?.[0]).toContain("post({ type: 'measureCleared' })");
+  });
+
   it('defaults to ball-and-stick with labels hidden when no options are given', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
     expect(html).toContain('STYLES["ballAndStick"] || STYLES.ballAndStick');

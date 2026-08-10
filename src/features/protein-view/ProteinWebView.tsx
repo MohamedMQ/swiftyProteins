@@ -1,7 +1,7 @@
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import WebView from 'react-native-webview';
 
 import { theme } from '../../design-system';
@@ -22,6 +22,7 @@ export interface ProteinWebViewHandle {
   requestSnapshot: () => void;
   setVisualizationMode: (mode: VisualizationMode) => void;
   setAtomLabelsVisible: (visible: boolean) => void;
+  setMeasureModeEnabled: (enabled: boolean) => void;
 }
 
 interface ViewerMessage {
@@ -32,7 +33,11 @@ interface ViewerMessage {
     | 'backgroundClick'
     | 'snapshot'
     | 'visualizationModeChanged'
-    | 'atomLabelsVisibilityChanged';
+    | 'atomLabelsVisibilityChanged'
+    | 'measureModeChanged'
+    | 'measurePointSelected'
+    | 'measurementResult'
+    | 'measureCleared';
   message?: string;
   dataUri?: string;
   atom?: {
@@ -44,6 +49,11 @@ interface ViewerMessage {
     bondOrders: number[];
     bonds?: BondDetail[];
   };
+  enabled?: boolean;
+  element?: string;
+  distance?: number;
+  fromElement?: string;
+  toElement?: string;
 }
 
 const SNAPSHOT_DATA_URI_PREFIX = 'data:image/png;base64,';
@@ -61,6 +71,7 @@ export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewPro
   const [html, setHtml] = useState<string | null>(null);
   const [buildError, setBuildError] = useState<string | null>(null);
   const [selectedAtom, setSelectedAtom] = useState<AtomInfo | null>(null);
+  const [measurementBanner, setMeasurementBanner] = useState<string | null>(null);
   const webviewRef = useRef<WebView>(null);
 
   useEffect(() => {
@@ -106,6 +117,9 @@ export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewPro
     setAtomLabelsVisible(visible: boolean) {
       webviewRef.current?.injectJavaScript(`window.__setAtomLabelsVisible(${JSON.stringify(visible)}); true;`);
     },
+    setMeasureModeEnabled(enabled: boolean) {
+      webviewRef.current?.injectJavaScript(`window.__setMeasureModeEnabled(${JSON.stringify(enabled)}); true;`);
+    },
   }));
 
   async function shareSnapshot(dataUri: string) {
@@ -143,6 +157,19 @@ export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewPro
       shareSnapshot(message.dataUri).catch((error) => {
         console.warn('Failed to share snapshot:', error);
       });
+    } else if (message.type === 'measureModeChanged') {
+      setMeasurementBanner(message.enabled === true ? 'Tap an atom to start measuring' : null);
+    } else if (message.type === 'measurePointSelected') {
+      setMeasurementBanner(`${message.element ?? ''} selected — tap a second atom`);
+    } else if (message.type === 'measureCleared') {
+      setMeasurementBanner('Tap an atom to start measuring');
+    } else if (
+      message.type === 'measurementResult' &&
+      message.distance !== undefined &&
+      message.fromElement !== undefined &&
+      message.toElement !== undefined
+    ) {
+      setMeasurementBanner(`${message.fromElement}–${message.toElement}: ${message.distance.toFixed(2)} Å`);
     }
   }
 
@@ -172,6 +199,11 @@ export const ProteinWebView = forwardRef<ProteinWebViewHandle, ProteinWebViewPro
         javaScriptEnabled
         domStorageEnabled={false}
       />
+      {measurementBanner !== null && (
+        <View style={styles.measurementBanner} accessible accessibilityRole="text">
+          <Text style={styles.measurementBannerText}>{measurementBanner}</Text>
+        </View>
+      )}
       {selectedAtom !== null && <AtomInfoCard atom={selectedAtom} />}
     </View>
   );
@@ -185,5 +217,23 @@ const styles = StyleSheet.create({
   loading: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  measurementBanner: {
+    position: 'absolute',
+    top: theme.spacing.md,
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
+    alignItems: 'center',
+    backgroundColor: theme.colors.surfaceRaised,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.borderStrong,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+  },
+  measurementBannerText: {
+    fontSize: theme.fontSize.caption,
+    fontWeight: theme.fontWeight.medium,
+    color: theme.colors.textPrimary,
   },
 });

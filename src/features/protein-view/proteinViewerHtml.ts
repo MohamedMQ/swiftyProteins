@@ -26,6 +26,7 @@ const SAME_ELEMENT_HIGHLIGHT_SCALE_FACTOR = 1.15;
 // Two taps on the same atom within this window count as a double-tap.
 const DOUBLE_TAP_MAX_INTERVAL_MS = 350;
 const CENTER_ON_ATOM_ANIMATION_MS = 400;
+const MEASUREMENT_LINE_COLOR = 'yellow';
 
 /**
  * Builds a self-contained HTML page: 3Dmol.js inlined directly (no CDN
@@ -38,7 +39,10 @@ const CENTER_ON_ATOM_ANIMATION_MS = 400;
  * on the next tap elsewhere; double-tapping the same atom re-centers the
  * camera on it, and the atomClick message includes each of the atom's
  * bonds (neighbor element, order, and length) for the info popup to show.
- * `window.__setVisualizationMode` lets React Native
+ * `window.__setMeasureModeEnabled` swaps normal atom-tap behavior for a
+ * two-point distance measurement: the first tap picks a point, the second
+ * draws a dashed line and a distance label between them and posts the
+ * result. `window.__setVisualizationMode` lets React Native
  * switch to the bonus space-filling/wireframe/stick models in place,
  * without re-parsing or re-adding the SDF model, and
  * `window.__setAtomLabelsVisible` toggles per-atom element-symbol labels.
@@ -109,6 +113,22 @@ export function buildProteinViewerHtml(
     var lastAtomClickAt = 0;
     var lastAtomTapSerial = null;
     var lastAtomTapAt = 0;
+    var measureModeEnabled = false;
+    var measurePendingSerial = null;
+    var measureShape = null;
+    var measureLabel = null;
+
+    function clearMeasurementArtifacts() {
+      if (measureShape !== null) {
+        viewer.removeShape(measureShape);
+        measureShape = null;
+      }
+      if (measureLabel !== null) {
+        viewer.removeLabel(measureLabel);
+        measureLabel = null;
+      }
+      measurePendingSerial = null;
+    }
 
     function highlightStyleFor(style, scaleFactor) {
       var baseScale = (style.sphere && style.sphere.scale) || ${HIGHLIGHT_FALLBACK_SPHERE_SCALE};
@@ -149,6 +169,54 @@ export function buildProteinViewerHtml(
     applyCurrentStyle();
 
     viewer.setClickable({}, true, function (atom) {
+      if (measureModeEnabled) {
+        if (measurePendingSerial === atom.serial) {
+          // Tapping the same atom again cancels the pending pick.
+          measurePendingSerial = null;
+          post({ type: 'measureCleared' });
+          return;
+        }
+        if (measurePendingSerial === null) {
+          clearMeasurementArtifacts();
+          measurePendingSerial = atom.serial;
+          post({ type: 'measurePointSelected', element: atom.elem });
+          return;
+        }
+        var firstAtoms = viewer.selectedAtoms({ serial: measurePendingSerial });
+        var first = firstAtoms[0];
+        measurePendingSerial = null;
+        if (!first) {
+          return;
+        }
+        var mdx = atom.x - first.x;
+        var mdy = atom.y - first.y;
+        var mdz = atom.z - first.z;
+        var distance = Math.sqrt(mdx * mdx + mdy * mdy + mdz * mdz);
+        measureShape = viewer.addLine({
+          color: '${MEASUREMENT_LINE_COLOR}',
+          dashed: true,
+          start: { x: first.x, y: first.y, z: first.z },
+          end: { x: atom.x, y: atom.y, z: atom.z },
+        });
+        measureLabel = viewer.addLabel(distance.toFixed(2) + ' \\u00C5', {
+          position: { x: (first.x + atom.x) / 2, y: (first.y + atom.y) / 2, z: (first.z + atom.z) / 2 },
+          fontColor: '${MEASUREMENT_LINE_COLOR}',
+          backgroundColor: 'black',
+          backgroundOpacity: 0.6,
+          fontSize: 12,
+          inFront: true,
+          showBackground: true,
+        });
+        viewer.render();
+        post({
+          type: 'measurementResult',
+          distance: distance,
+          fromElement: first.elem,
+          toElement: atom.elem,
+        });
+        return;
+      }
+
       var tapAt = Date.now();
       var isDoubleTap =
         lastAtomTapSerial === atom.serial && tapAt - lastAtomTapAt <= ${DOUBLE_TAP_MAX_INTERVAL_MS};
@@ -210,11 +278,33 @@ export function buildProteinViewerHtml(
 
     document.getElementById('viewer').addEventListener('click', function () {
       if (Date.now() - lastAtomClickAt > ${ATOM_CLICK_DEBOUNCE_MS}) {
+        if (measureModeEnabled) {
+          if (measurePendingSerial !== null) {
+            measurePendingSerial = null;
+            post({ type: 'measureCleared' });
+          }
+          return;
+        }
         clearSelection();
         viewer.render();
         post({ type: 'backgroundClick' });
       }
     });
+
+    // Invoked from React Native to toggle "measure" mode: while enabled,
+    // atom taps pick two points and draw a dashed line + distance label
+    // between them instead of the normal select/highlight behavior.
+    window.__setMeasureModeEnabled = function (enabled) {
+      try {
+        measureModeEnabled = !!enabled;
+        clearSelection();
+        clearMeasurementArtifacts();
+        viewer.render();
+        post({ type: 'measureModeChanged', enabled: measureModeEnabled });
+      } catch (error) {
+        post({ type: 'error', message: String(error && error.message ? error.message : error) });
+      }
+    };
 
     // Invoked from React Native to switch between the mandatory
     // ball-and-stick model and the bonus space-filling/wireframe/stick

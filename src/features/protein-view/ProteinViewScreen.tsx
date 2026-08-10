@@ -26,6 +26,7 @@ export function ProteinViewScreen({
   const webviewRef = useRef<ProteinWebViewHandle>(null);
   const [mode, setMode] = useState<VisualizationMode>(initialVisualizationMode);
   const [labelsVisible, setLabelsVisible] = useState(initialAtomLabelsVisible);
+  const [measureModeEnabled, setMeasureModeEnabled] = useState(false);
 
   function handleModeChange(nextMode: VisualizationMode) {
     setMode(nextMode);
@@ -36,6 +37,12 @@ export function ProteinViewScreen({
     const next = !labelsVisible;
     setLabelsVisible(next);
     webviewRef.current?.setAtomLabelsVisible(next);
+  }
+
+  function toggleMeasureMode() {
+    const next = !measureModeEnabled;
+    setMeasureModeEnabled(next);
+    webviewRef.current?.setMeasureModeEnabled(next);
   }
 
   return (
@@ -74,6 +81,20 @@ export function ProteinViewScreen({
             name={labelsVisible ? 'text' : 'text-outline'}
             size={20}
             color={labelsVisible ? theme.colors.accent : theme.colors.textSecondary}
+          />
+        </Pressable>
+        <Pressable
+          onPress={toggleMeasureMode}
+          hitSlop={8}
+          style={styles.labelsToggle}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: measureModeEnabled }}
+          accessibilityLabel="Toggle measure distance mode"
+        >
+          <Ionicons
+            name={measureModeEnabled ? 'resize' : 'resize-outline'}
+            size={20}
+            color={measureModeEnabled ? theme.colors.accent : theme.colors.textSecondary}
           />
         </Pressable>
       </View>
