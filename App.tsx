@@ -72,7 +72,7 @@ export default function App() {
         />
       );
     }
-    if (showSettings) {
+    if (showSettings) { 
       return (
         <SettingsScreen
           preferences={preferences}

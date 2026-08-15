@@ -30,6 +30,12 @@ const DOUBLE_TAP_MAX_INTERVAL_MS = 350;
 const CENTER_ON_ATOM_ANIMATION_MS = 400;
 const MEASUREMENT_LINE_COLOR = 'yellow';
 const JPEG_EXPORT_QUALITY = 0.92;
+// Zoom-in already stops on its own (3Dmol refuses to get closer than 1 unit
+// from the camera). Zoom-out has no built-in limit, so it's capped here at
+// a multiple of the molecule's own fitted distance (from viewer.zoomTo()),
+// which scales with each ligand's size instead of using one fixed distance
+// that would be too tight for large ligands or too loose for small ones.
+const ZOOM_OUT_LIMIT_FACTOR = 4;
 
 /**
  * Builds a self-contained HTML page: 3Dmol.js inlined directly (no CDN
@@ -363,6 +369,12 @@ export function buildProteinViewerHtml(
     };
 
     viewer.zoomTo();
+    // Cap how far out the user can zoom relative to this molecule's own
+    // fitted framing, so panning out never scrolls the ligand away to a
+    // speck. Must run after zoomTo() so the fitted distance reflects this
+    // molecule's actual extent.
+    var fittedDistance = viewer.CAMERA_Z - viewer.getView()[3];
+    viewer.setZoomLimits(0, fittedDistance * ${ZOOM_OUT_LIMIT_FACTOR});
     viewer.render();
 
     if (${JSON.stringify(initialAtomLabelsVisible)}) {
