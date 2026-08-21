@@ -11,11 +11,6 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
 
-/**
- * Fetches and classifies the result — a caller-initiated cancellation
- * (e.g. navigating away mid-request) is re-thrown rather than turned into
- * a result, since it isn't a real failure to show the user.
- */
 export async function fetchLigandCif(
   code: string,
   signal?: AbortSignal

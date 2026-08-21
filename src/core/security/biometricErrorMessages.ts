@@ -1,11 +1,5 @@
 import type { LocalAuthenticationError } from 'expo-local-authentication';
 
-/**
- * User-facing text for every LocalAuthenticationError. Returns null for
- * cases the user caused on purpose (cancelling out of the prompt) — those
- * shouldn't surface as an "error" in the UI, just a silent return to the
- * password form.
- */
 export function mapBiometricError(error: LocalAuthenticationError): string | null {
   switch (error) {
     case 'user_cancel':

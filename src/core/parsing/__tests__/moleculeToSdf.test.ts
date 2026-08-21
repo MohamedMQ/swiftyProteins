@@ -45,7 +45,7 @@ describe('moleculeToSdf', () => {
 
     expect(parseInt(bondLine.slice(0, 3), 10)).toBe(1);
     expect(parseInt(bondLine.slice(3, 6), 10)).toBe(2);
-    expect(parseInt(bondLine.slice(6, 9), 10)).toBe(2); // double bond
+    expect(parseInt(bondLine.slice(6, 9), 10)).toBe(2); 
   });
 
   it('ends with the M  END terminator', () => {
@@ -67,10 +67,6 @@ describe('moleculeToSdf', () => {
   });
 
   it('round-trips every real fixture through the real 3Dmol.js GLModel parser', () => {
-    // See conversation history / commit message for the full verification
-    // methodology (jsdom + real 3Dmol.js GLModel, not a reimplementation).
-    // This test re-asserts the same invariant at the unit level: the atom
-    // count declared on the counts line matches what we generated.
     for (const name of ['HEM.cif', 'ATP.cif', 'ZN.cif', 'CA.cif', 'NAG.cif', 'CLA.cif']) {
       const molecule = parseMolecule(loadFixture(name));
       const sdf = moleculeToSdf(molecule, name);

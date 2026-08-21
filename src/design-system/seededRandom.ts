@@ -6,7 +6,6 @@ export function hashString(seed: string): number {
   return hash;
 }
 
-/** Deterministic PRNG (mulberry32) — same seed always produces the same sequence. */
 export function createSeededRandom(seed: number): () => number {
   let state = seed;
   return () => {

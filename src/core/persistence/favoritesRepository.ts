@@ -21,10 +21,6 @@ export async function loadFavoriteCodes(): Promise<Set<string>> {
   return parseFavoritesJson(await FAVORITES_FILE.text());
 }
 
-/**
- * Favorites are best-effort persistence — a write failure shouldn't break
- * the in-memory toggle the user just performed.
- */
 export function saveFavoriteCodes(codes: ReadonlySet<string>): void {
   try {
     if (!FAVORITES_FILE.exists) {
@@ -32,6 +28,5 @@ export function saveFavoriteCodes(codes: ReadonlySet<string>): void {
     }
     FAVORITES_FILE.write(JSON.stringify(Array.from(codes)));
   } catch {
-    // Best-effort; a failed write just means favorites won't survive restart.
   }
 }

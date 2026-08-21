@@ -8,14 +8,6 @@ export class LigandRequestTimeoutError extends Error {
   }
 }
 
-/**
- * Raw transport only — returns whatever Response comes back (any HTTP
- * status) so status-code handling stays a separate concern. Both the
- * timeout and an external cancellation (e.g. the user navigating away)
- * abort the same underlying fetch, but a timeout is re-thrown as a
- * distinct error type so callers can tell "timed out" apart from "the
- * caller cancelled us on purpose" without racing flags.
- */
 export async function fetchLigandCifResponse(
   code: string,
   externalSignal?: AbortSignal

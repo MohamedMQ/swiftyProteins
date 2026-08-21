@@ -1,16 +1,3 @@
-/**
- * Splits a single CIF line into tokens, respecting single/double-quoted
- * values that may contain whitespace (e.g. `"D-saccharide, beta linking"`,
- * or a nucleotide atom name like `"O5'"` where the value itself contains
- * the other quote character). A naive `split(' ')` breaks on both.
- *
- * Matches the common case in real RCSB ligand files: a quote only opens a
- * quoted token when it's the first character of that token, and closes on
- * the next occurrence of the same quote character. The CIF spec's stricter
- * rule (a closing quote must be followed by whitespace) isn't implemented,
- * since it doesn't come up in ligand atom/bond data — a value never has
- * text glued onto a closing quote in that data.
- */
 export function tokenizeCifLine(line: string): string[] {
   const tokens: string[] = [];
   const length = line.length;
@@ -32,7 +19,7 @@ export function tokenizeCifLine(line: string): string[] {
         i += 1;
       }
       tokens.push(line.slice(start, i));
-      i += 1; // skip closing quote
+      i += 1;
     } else {
       const start = i;
       while (i < length && !/\s/.test(line[i])) {
@@ -45,15 +32,6 @@ export function tokenizeCifLine(line: string): string[] {
   return tokens;
 }
 
-/**
- * Splits raw CIF text into lines with multi-line `;`-delimited text blocks
- * removed. A block starts on a line beginning with `;` and ends on the next
- * line beginning with `;` — everything in between (and the delimiter lines
- * themselves) is dropped. None of that free-text data (synonyms, chemical
- * names) is needed for atom/bond parsing, but if it isn't stripped first,
- * line-based scanning downstream would misinterpret its content as tags or
- * loop rows and misalign everything that follows.
- */
 export function stripCifTextBlocks(rawText: string): string[] {
   const rawLines = rawText.split(/\r?\n/);
   const cleanLines: string[] = [];
@@ -81,19 +59,6 @@ export interface CifCategoryTable {
   rows: Record<string, string>[];
 }
 
-/**
- * Finds a CIF category's data regardless of which of the two equivalent
- * representations the file uses:
- *  - `loop_` form: a `loop_` line, then one `_category.tag` line per
- *    column, then N data rows of that many whitespace/quote-tokenized
- *    values each (a row can wrap across physical lines — tokens are
- *    accumulated and re-chunked by tag count, not by line).
- *  - flat form: each tag on its own line with a single inline value, no
- *    `loop_` keyword at all. RCSB uses this for single-atom ligands (e.g.
- *    ZN, CA) where the atom/bond category has exactly one row.
- *
- * Returns null if the category isn't present in either form.
- */
 export function extractCifCategory(
   lines: string[],
   category: string

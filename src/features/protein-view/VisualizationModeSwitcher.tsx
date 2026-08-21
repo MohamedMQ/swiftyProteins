@@ -1,13 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Modal, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { theme } from '../../design-system';
+import { useTheme, type Theme } from '../../design-system';
 import { VISUALIZATION_MODES, type VisualizationMode } from './proteinViewerHtml';
 
 interface VisualizationModeSwitcherProps {
   mode: VisualizationMode;
   onChange: (mode: VisualizationMode) => void;
+  style?: StyleProp<ViewStyle>;
 }
 
 const MODE_LABELS: Record<VisualizationMode, string> = {
@@ -24,15 +25,14 @@ interface TriggerLayout {
   height: number;
 }
 
-export function VisualizationModeSwitcher({ mode, onChange }: VisualizationModeSwitcherProps) {
+export function VisualizationModeSwitcher({ mode, onChange, style }: VisualizationModeSwitcherProps) {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const triggerRef = useRef<View>(null);
   const [open, setOpen] = useState(false);
   const [triggerLayout, setTriggerLayout] = useState<TriggerLayout | null>(null);
 
   function handleOpen() {
-    // Measured on open (rather than kept in state via onLayout) so the
-    // dropdown always anchors to the trigger's current on-screen position,
-    // even if the surrounding layout shifted since the last render.
     triggerRef.current?.measureInWindow((x, y, width, height) => {
       setTriggerLayout({ x, y, width, height });
       setOpen(true);
@@ -45,7 +45,7 @@ export function VisualizationModeSwitcher({ mode, onChange }: VisualizationModeS
   }
 
   return (
-    <View style={styles.wrapper} ref={triggerRef}>
+    <View style={[styles.wrapper, style]} ref={triggerRef}>
       <Pressable
         onPress={handleOpen}
         style={styles.trigger}
@@ -96,58 +96,58 @@ export function VisualizationModeSwitcher({ mode, onChange }: VisualizationModeS
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-  },
-  trigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 44,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.border,
-    paddingHorizontal: theme.spacing.md,
-  },
-  triggerLabel: {
-    fontSize: theme.fontSize.caption,
-    fontWeight: theme.fontWeight.medium,
-    color: theme.colors.textPrimary,
-  },
-  backdrop: {
-    flex: 1,
-  },
-  dropdown: {
-    position: 'absolute',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.border,
-    paddingVertical: theme.spacing.xs,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-  },
-  optionSelected: {
-    backgroundColor: theme.colors.background,
-  },
-  optionLabel: {
-    fontSize: theme.fontSize.body,
-    color: theme.colors.textSecondary,
-  },
-  optionLabelSelected: {
-    color: theme.colors.accent,
-    fontWeight: theme.fontWeight.medium,
-  },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    wrapper: {},
+    trigger: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      height: 44,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.radius.pill,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.colors.border,
+      paddingHorizontal: theme.spacing.md,
+    },
+    triggerLabel: {
+      fontSize: theme.fontSize.caption,
+      fontWeight: theme.fontWeight.medium,
+      color: theme.colors.textPrimary,
+    },
+    backdrop: {
+      flex: 1,
+    },
+    dropdown: {
+      position: 'absolute',
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.radius.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.colors.border,
+      paddingVertical: theme.spacing.xs,
+      shadowColor: '#000',
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 6,
+    },
+    option: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+    },
+    optionSelected: {
+      backgroundColor: theme.colors.background,
+    },
+    optionLabel: {
+      fontSize: theme.fontSize.body,
+      color: theme.colors.textSecondary,
+    },
+    optionLabelSelected: {
+      color: theme.colors.accent,
+      fontWeight: theme.fontWeight.medium,
+    },
+  });
+}

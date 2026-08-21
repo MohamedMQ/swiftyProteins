@@ -10,7 +10,6 @@ export type LigandFetchError =
   | { type: 'parseFailure' }
   | { type: 'serverError'; status: number };
 
-/** Exact copy matches the subject's required message strings. */
 export function getLigandFetchErrorMessage(error: LigandFetchError): string {
   switch (error.type) {
     case 'noConnection':
@@ -26,7 +25,6 @@ export function getLigandFetchErrorMessage(error: LigandFetchError): string {
   }
 }
 
-/** Short headline for the alert card; the full required copy is the message below it. */
 export function getLigandFetchErrorTitle(error: LigandFetchError): string {
   switch (error.type) {
     case 'noConnection':

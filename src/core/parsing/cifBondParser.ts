@@ -15,13 +15,6 @@ const BOND_ORDER_BY_CODE: Record<string, BondOrder> = {
   TRIP: 'triple',
 };
 
-/**
- * bondTable is null for ligands with no bond category at all — single-atom
- * ligands like ZN or CA have nothing to bond, which is a valid, expected
- * result, not an error. An unrecognized value_order falls back to 'single'
- * rather than throwing, since a bond of unknown order is still worth
- * rendering as a connection.
- */
 export function parseBonds(bondTable: CifCategoryTable | null): Bond[] {
   if (bondTable === null) {
     return [];

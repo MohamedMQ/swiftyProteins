@@ -1,10 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
 
-/**
- * Thin JSON wrapper around expo-secure-store (iOS Keychain / Android Keystore).
- * Callers own serialization concerns beyond JSON; this never stores plain text
- * secrets directly, only whatever structured record the caller passes in.
- */
 export async function getSecureJSON<T>(key: string): Promise<T | null> {
   const raw = await SecureStore.getItemAsync(key);
   if (raw === null) {

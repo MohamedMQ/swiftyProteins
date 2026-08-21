@@ -2,9 +2,15 @@ import { DEFAULT_PREFERENCES, parsePreferencesJson } from '../preferencesReposit
 
 describe('parsePreferencesJson', () => {
   it('parses a fully valid preferences object', () => {
-    expect(parsePreferencesJson('{"defaultVisualizationMode":"spaceFilling","defaultAtomLabelsVisible":true}')).toEqual({
+    expect(
+      parsePreferencesJson(
+        '{"defaultVisualizationMode":"spaceFilling","defaultAtomLabelsVisible":true,"themeMode":"light","hasSeenOnboarding":true}'
+      )
+    ).toEqual({
       defaultVisualizationMode: 'spaceFilling',
       defaultAtomLabelsVisible: true,
+      themeMode: 'light',
+      hasSeenOnboarding: true,
     });
   });
 
@@ -34,8 +40,29 @@ describe('parsePreferencesJson', () => {
 
   it('fills in missing fields with defaults rather than requiring the full shape', () => {
     expect(parsePreferencesJson('{"defaultAtomLabelsVisible":true}')).toEqual({
-      defaultVisualizationMode: DEFAULT_PREFERENCES.defaultVisualizationMode,
+      ...DEFAULT_PREFERENCES,
       defaultAtomLabelsVisible: true,
+    });
+  });
+
+  it('falls back to the default theme mode when the stored value is not "dark" or "light"', () => {
+    expect(parsePreferencesJson('{"themeMode":"solarized"}')).toEqual({
+      ...DEFAULT_PREFERENCES,
+      themeMode: DEFAULT_PREFERENCES.themeMode,
+    });
+  });
+
+  it('accepts a stored light theme mode', () => {
+    expect(parsePreferencesJson('{"themeMode":"light"}')).toEqual({
+      ...DEFAULT_PREFERENCES,
+      themeMode: 'light',
+    });
+  });
+
+  it('falls back to the default onboarding flag when the stored value is not a boolean', () => {
+    expect(parsePreferencesJson('{"hasSeenOnboarding":"yes"}')).toEqual({
+      ...DEFAULT_PREFERENCES,
+      hasSeenOnboarding: DEFAULT_PREFERENCES.hasSeenOnboarding,
     });
   });
 });

@@ -15,11 +15,6 @@ export async function getCachedLigandCif(code: string): Promise<string | null> {
   return file.text();
 }
 
-/**
- * Caching is best-effort — a write failure (e.g. disk full) shouldn't break
- * the fetch that just succeeded, so failures are swallowed here rather than
- * bubbled up to the caller.
- */
 export function setCachedLigandCif(code: string, raw: string): void {
   try {
     if (!CACHE_DIR.exists) {
@@ -29,7 +24,5 @@ export function setCachedLigandCif(code: string, raw: string): void {
     file.create({ intermediates: true, overwrite: true });
     file.write(raw);
   } catch {
-    // Best-effort cache; a failed write just means this ligand won't be
-    // available offline next time, not a failure of the fetch itself.
   }
 }

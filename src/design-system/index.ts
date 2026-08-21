@@ -4,6 +4,6 @@ export * from './moleculeGlyph';
 export * from './radius';
 export * from './spacing';
 export * from './typography';
-export { theme } from './theme';
-export type { Theme } from './theme';
+export { theme, buildTheme, useTheme, ThemeModeContext } from './theme';
+export type { Theme, ThemeMode } from './theme';
 export * from './components';

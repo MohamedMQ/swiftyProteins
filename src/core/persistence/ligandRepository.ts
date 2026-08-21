@@ -3,10 +3,6 @@ import { File } from 'expo-file-system';
 
 import ligandsListAsset from '../../../assets/data/ligands.txt';
 
-/**
- * Parses the bundled ligands.txt format: one code per line. Trims whitespace,
- * drops empty lines, removes duplicates, and returns the codes sorted.
- */
 export function parseLigandCodes(raw: string): string[] {
   const codes = new Set<string>();
 

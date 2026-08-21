@@ -21,15 +21,6 @@ export function isBiometricLoginAvailable(capability: BiometricCapability): bool
   return capability.hasHardware && capability.isEnrolled;
 }
 
-/**
- * supportedAuthenticationTypesAsync() reports hardware *capability*, not
- * which modality is actually enrolled — plenty of Android devices report
- * both fingerprint and facial recognition as supported even when only a
- * fingerprint is set up. Fingerprint is checked first since it's the far
- * more common actually-enrolled modality on Android; devices with only
- * Face ID (e.g. modern iPhones, which have no fingerprint sensor at all)
- * still fall through to it correctly.
- */
 export function getBiometricButtonLabel(types: LocalAuthentication.AuthenticationType[]): string {
   const isIOS = Platform.OS === 'ios';
 
@@ -45,12 +36,6 @@ export function getBiometricButtonLabel(types: LocalAuthentication.Authenticatio
   return 'Use biometrics';
 }
 
-/**
- * disableDeviceFallback/fallbackLabel keep the OS from offering its own
- * "enter device passcode" path: the app already has its own password form
- * as the fallback, and stacking a second unrelated fallback on top of it
- * would just be confusing.
- */
 export async function authenticateWithBiometrics(
   promptMessage = 'Log in to Swifty Protein'
 ): Promise<LocalAuthentication.LocalAuthenticationResult> {

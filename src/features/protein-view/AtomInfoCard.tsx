@@ -1,7 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useMemo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { getElementInfo } from '../../core/chemistry/elementInfo';
-import { theme } from '../../design-system';
+import { useTheme, type Theme } from '../../design-system';
 
 export interface BondDetail {
   element: string;
@@ -20,6 +22,7 @@ export interface AtomInfo {
 
 interface AtomInfoCardProps {
   atom: AtomInfo;
+  onDismiss: () => void;
 }
 
 const BOND_ORDER_LABELS: Record<number, string> = { 1: 'single', 2: 'double', 3: 'triple' };
@@ -60,7 +63,9 @@ function formatCoordinate(value: number): string {
   return value.toFixed(1);
 }
 
-export function AtomInfoCard({ atom }: AtomInfoCardProps) {
+export function AtomInfoCard({ atom, onDismiss }: AtomInfoCardProps) {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const info = getElementInfo(atom.element);
   const position = `${formatCoordinate(atom.x)}, ${formatCoordinate(atom.y)}, ${formatCoordinate(atom.z)}`;
   const bonds = summarizeBonds(atom.bondOrders);
@@ -82,6 +87,15 @@ export function AtomInfoCard({ atom }: AtomInfoCardProps) {
           <View style={[styles.dot, { backgroundColor: info.color }]} />
           <Text style={styles.name}>{info.name}</Text>
           <Text style={styles.symbol}>{atom.element}</Text>
+          <Pressable
+            onPress={onDismiss}
+            hitSlop={8}
+            style={styles.closeButton}
+            accessibilityRole="button"
+            accessibilityLabel="Close atom details"
+          >
+            <Ionicons name="close" size={16} color={theme.colors.textTertiary} />
+          </Pressable>
         </View>
         <View style={styles.rows}>
           <View style={styles.row}>
@@ -116,73 +130,78 @@ export function AtomInfoCard({ atom }: AtomInfoCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: theme.spacing.lg,
-  },
-  card: {
-    backgroundColor: theme.colors.surfaceRaised,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.borderStrong,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-  },
-  dot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-  },
-  name: {
-    fontSize: theme.fontSize.body,
-    fontWeight: theme.fontWeight.medium,
-    color: theme.colors.textPrimary,
-  },
-  symbol: {
-    marginLeft: 'auto',
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.textQuaternary,
-  },
-  rows: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
-    paddingTop: theme.spacing.xs + 2,
-    gap: theme.spacing.xs,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  rowLabel: {
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.textTertiary,
-  },
-  rowValue: {
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.textSecondary,
-  },
-  bondList: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
-    marginTop: theme.spacing.xs + 2,
-    paddingTop: theme.spacing.xs + 2,
-    gap: theme.spacing.xs,
-  },
-  bondRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  bondText: {
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.textQuaternary,
-  },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    wrapper: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      padding: theme.spacing.lg,
+    },
+    card: {
+      backgroundColor: theme.colors.surfaceRaised,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.colors.borderStrong,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.sm,
+    },
+    dot: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+    },
+    name: {
+      fontSize: theme.fontSize.body,
+      fontWeight: theme.fontWeight.medium,
+      color: theme.colors.textPrimary,
+    },
+    symbol: {
+      marginLeft: 'auto',
+      fontSize: theme.fontSize.caption,
+      color: theme.colors.textQuaternary,
+    },
+    closeButton: {
+      padding: 2,
+    },
+    rows: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.colors.border,
+      paddingTop: theme.spacing.xs + 2,
+      gap: theme.spacing.xs,
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    rowLabel: {
+      fontSize: theme.fontSize.caption,
+      color: theme.colors.textTertiary,
+    },
+    rowValue: {
+      fontSize: theme.fontSize.caption,
+      color: theme.colors.textSecondary,
+    },
+    bondList: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.colors.border,
+      marginTop: theme.spacing.xs + 2,
+      paddingTop: theme.spacing.xs + 2,
+      gap: theme.spacing.xs,
+    },
+    bondRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    bondText: {
+      fontSize: theme.fontSize.caption,
+      color: theme.colors.textQuaternary,
+    },
+  });
+}

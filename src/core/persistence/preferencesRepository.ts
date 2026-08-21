@@ -1,21 +1,30 @@
 import { File, Paths } from 'expo-file-system';
 
+import type { ThemeMode } from '../../design-system';
 import { VISUALIZATION_MODES, type VisualizationMode } from '../viewer/visualizationMode';
 
 export interface Preferences {
   defaultVisualizationMode: VisualizationMode;
   defaultAtomLabelsVisible: boolean;
+  themeMode: ThemeMode;
+  hasSeenOnboarding: boolean;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
   defaultVisualizationMode: 'ballAndStick',
   defaultAtomLabelsVisible: false,
+  themeMode: 'dark',
+  hasSeenOnboarding: false,
 };
 
 const PREFERENCES_FILE = new File(Paths.document, 'preferences.json');
 
 function isVisualizationMode(value: unknown): value is VisualizationMode {
   return typeof value === 'string' && (VISUALIZATION_MODES as readonly string[]).includes(value);
+}
+
+function isThemeMode(value: unknown): value is ThemeMode {
+  return value === 'dark' || value === 'light';
 }
 
 export function parsePreferencesJson(raw: string): Preferences {
@@ -33,6 +42,11 @@ export function parsePreferencesJson(raw: string): Preferences {
         typeof candidate.defaultAtomLabelsVisible === 'boolean'
           ? candidate.defaultAtomLabelsVisible
           : DEFAULT_PREFERENCES.defaultAtomLabelsVisible,
+      themeMode: isThemeMode(candidate.themeMode) ? candidate.themeMode : DEFAULT_PREFERENCES.themeMode,
+      hasSeenOnboarding:
+        typeof candidate.hasSeenOnboarding === 'boolean'
+          ? candidate.hasSeenOnboarding
+          : DEFAULT_PREFERENCES.hasSeenOnboarding,
     };
   } catch {
     return DEFAULT_PREFERENCES;
@@ -46,10 +60,6 @@ export async function loadPreferences(): Promise<Preferences> {
   return parsePreferencesJson(await PREFERENCES_FILE.text());
 }
 
-/**
- * Preferences are best-effort persistence — a write failure shouldn't break
- * the in-memory setting the user just changed.
- */
 export function savePreferences(preferences: Preferences): void {
   try {
     if (!PREFERENCES_FILE.exists) {
@@ -57,6 +67,5 @@ export function savePreferences(preferences: Preferences): void {
     }
     PREFERENCES_FILE.write(JSON.stringify(preferences));
   } catch {
-    // Best-effort; a failed write just means the preference won't survive restart.
   }
 }

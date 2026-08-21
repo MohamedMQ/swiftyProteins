@@ -1,27 +1,40 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { registerUser } from '../../core/auth/authService';
 import { validatePassword, validateUsername } from '../../core/auth/validation';
-import { PrimaryButton, TextField, theme } from '../../design-system';
+import { PrimaryButton, TextField, useTheme, type Theme } from '../../design-system';
 
 interface SignUpScreenProps {
   onRegistered: (username: string) => void;
   onNavigateToLogin: () => void;
 }
 
-// Mirrors the rule count in validatePassword (length, number, letter).
 const PASSWORD_RULE_COUNT = 3;
 
 export function SignUpScreen({ onRegistered, onNavigateToLogin }: SignUpScreenProps) {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [usernameTouched, setUsernameTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
 
   const usernameErrors = useMemo(() => validateUsername(username), [username]);
   const passwordErrors = useMemo(() => validatePassword(password), [password]);
@@ -77,159 +90,177 @@ export function SignUpScreen({ onRegistered, onNavigateToLogin }: SignUpScreenPr
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
-      <Pressable
-        onPress={onNavigateToLogin}
-        hitSlop={8}
-        style={styles.back}
-        accessibilityRole="button"
-        accessibilityLabel="Back to login"
-      >
-        <Ionicons name="chevron-back" size={24} color={theme.colors.textSecondary} />
-      </Pressable>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <Pressable
+          onPress={onNavigateToLogin}
+          hitSlop={8}
+          style={styles.back}
+          accessibilityRole="button"
+          accessibilityLabel="Back to login"
+        >
+          <Ionicons name="chevron-back" size={24} color={theme.colors.textSecondary} />
+        </Pressable>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.formWidth}>
-          <Image
-            source={require('../../../assets/splash-icon.png')}
-            style={styles.mark}
-            resizeMode="contain"
-          />
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.formWidth}>
+            <Image
+              source={require('../../../assets/splash-icon.png')}
+              style={styles.mark}
+              resizeMode="contain"
+            />
 
-          <Text style={styles.title}>Create account</Text>
-          <Text style={styles.subtitle}>Stored securely on your device</Text>
+            <Text style={styles.title}>Create account</Text>
+            <Text style={styles.subtitle}>Stored securely on your device</Text>
 
-          <TextField
-            label="Username"
-            placeholder="Choose a username"
-            value={username}
-            onChangeText={handleUsernameChange}
-            onBlur={() => setUsernameTouched(true)}
-            errorText={usernameTouched ? usernameErrors[0] : undefined}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+            <TextField
+              label="Username"
+              placeholder="Choose a username"
+              value={username}
+              onChangeText={handleUsernameChange}
+              onBlur={() => setUsernameTouched(true)}
+              errorText={usernameTouched ? usernameErrors[0] : undefined}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => passwordRef.current?.focus()}
+            />
 
-          <TextField
-            label="Password"
-            placeholder="Choose a password"
-            value={password}
-            onChangeText={handlePasswordChange}
-            secureTextEntry
-            autoCapitalize="none"
-          />
+            <TextField
+              ref={passwordRef}
+              label="Password"
+              placeholder="Choose a password"
+              value={password}
+              onChangeText={handlePasswordChange}
+              secureTextEntry
+              autoCapitalize="none"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+            />
 
-          {password.length > 0 && (
-            <View style={styles.strength}>
-              <View style={styles.strengthBars}>
-                {Array.from({ length: PASSWORD_RULE_COUNT }).map((_, index) => (
-                  <View
-                    key={index}
-                    style={[styles.strengthBar, index < passedRuleCount && styles.strengthBarFilled]}
-                  />
-                ))}
+            {password.length > 0 && (
+              <View style={styles.strength}>
+                <View style={styles.strengthBars}>
+                  {Array.from({ length: PASSWORD_RULE_COUNT }).map((_, index) => (
+                    <View
+                      key={index}
+                      style={[styles.strengthBar, index < passedRuleCount && styles.strengthBarFilled]}
+                    />
+                  ))}
+                </View>
+                <Text style={styles.strengthLabel}>
+                  {strengthLabel}
+                  {passwordErrors.length > 0 ? ` — ${passwordErrors.join(', ')}` : ''}
+                </Text>
               </View>
-              <Text style={styles.strengthLabel}>
-                {strengthLabel}
-                {passwordErrors.length > 0 ? ` — ${passwordErrors.join(', ')}` : ''}
-              </Text>
-            </View>
-          )}
+            )}
 
-          <TextField
-            label="Confirm password"
-            placeholder="Re-enter your password"
-            value={confirmPassword}
-            onChangeText={handleConfirmPasswordChange}
-            errorText={confirmError}
-            secureTextEntry
-            autoCapitalize="none"
-          />
+            <TextField
+              ref={confirmPasswordRef}
+              label="Confirm password"
+              placeholder="Re-enter your password"
+              value={confirmPassword}
+              onChangeText={handleConfirmPasswordChange}
+              errorText={confirmError}
+              secureTextEntry
+              autoCapitalize="none"
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                if (canSubmit) {
+                  handleSubmit();
+                }
+              }}
+            />
 
-          {formError !== null && <Text style={styles.error}>{formError}</Text>}
+            {formError !== null && <Text style={styles.error}>{formError}</Text>}
 
-          <PrimaryButton
-            label="Create account"
-            onPress={handleSubmit}
-            loading={submitting}
-            disabled={!canSubmit}
-          />
-        </View>
-      </ScrollView>
+            <PrimaryButton
+              label="Create account"
+              onPress={handleSubmit}
+              loading={submitting}
+              disabled={!canSubmit}
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  back: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-  },
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'stretch',
-    padding: theme.spacing.xl,
-    paddingTop: theme.spacing.md,
-  },
-  formWidth: {
-    width: '100%',
-    maxWidth: 420,
-    alignSelf: 'center',
-  },
-  mark: {
-    width: 48,
-    height: 48,
-    alignSelf: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.fontSize.heading,
-    fontWeight: theme.fontWeight.bold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: theme.fontSize.subtitle,
-    color: theme.colors.textQuaternary,
-    marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.xl,
-    textAlign: 'center',
-  },
-  strength: {
-    marginTop: -theme.spacing.xs,
-    marginBottom: theme.spacing.md,
-  },
-  strengthBars: {
-    flexDirection: 'row',
-    gap: theme.spacing.xs,
-  },
-  strengthBar: {
-    flex: 1,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: theme.colors.border,
-  },
-  strengthBarFilled: {
-    backgroundColor: theme.colors.accent,
-  },
-  strengthLabel: {
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.textQuaternary,
-    marginTop: theme.spacing.xs,
-  },
-  error: {
-    fontSize: theme.fontSize.caption,
-    color: theme.colors.danger,
-    marginBottom: theme.spacing.sm,
-    textAlign: 'center',
-  },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    back: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: theme.spacing.lg,
+      paddingTop: theme.spacing.sm,
+    },
+    content: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      alignItems: 'stretch',
+      padding: theme.spacing.xl,
+      paddingTop: theme.spacing.md,
+    },
+    formWidth: {
+      width: '100%',
+      maxWidth: 420,
+      alignSelf: 'center',
+    },
+    mark: {
+      width: 48,
+      height: 48,
+      alignSelf: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    title: {
+      fontSize: theme.fontSize.heading,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: theme.fontSize.subtitle,
+      color: theme.colors.textQuaternary,
+      marginTop: theme.spacing.xs,
+      marginBottom: theme.spacing.xl,
+      textAlign: 'center',
+    },
+    strength: {
+      marginTop: -theme.spacing.xs,
+      marginBottom: theme.spacing.md,
+    },
+    strengthBars: {
+      flexDirection: 'row',
+      gap: theme.spacing.xs,
+    },
+    strengthBar: {
+      flex: 1,
+      height: 3,
+      borderRadius: 2,
+      backgroundColor: theme.colors.border,
+    },
+    strengthBarFilled: {
+      backgroundColor: theme.colors.accent,
+    },
+    strengthLabel: {
+      fontSize: theme.fontSize.caption,
+      color: theme.colors.textQuaternary,
+      marginTop: theme.spacing.xs,
+    },
+    error: {
+      fontSize: theme.fontSize.caption,
+      color: theme.colors.danger,
+      marginBottom: theme.spacing.sm,
+      textAlign: 'center',
+    },
+  });
+}

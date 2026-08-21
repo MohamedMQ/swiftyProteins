@@ -7,16 +7,24 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.swiftyproteins.app",
+      "infoPlist": {}
     },
     "android": {
+      "package": "com.swiftyproteins.app",
       "adaptiveIcon": {
         "backgroundColor": "#0E1116",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,7 +42,37 @@
       ],
       "expo-secure-store",
       "expo-font",
-      "expo-sharing"
-    ]
+      "expo-sharing",
+      "expo-dev-client",
+      [
+        "react-native-nitro-screen-recorder",
+        {
+          "enableCameraPermission": false,
+          "enableMicrophonePermission": false
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "BroadcastExtension",
+                  "bundleIdentifier": "com.swiftyproteins.app.BroadcastExtension",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.swiftyproteins.app.screen-recorder"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "15b4c6f2-18bc-445c-8768-8c8bbdbc7b92"
+      }
+    }
   }
 }

@@ -10,9 +10,6 @@ describe('buildProteinViewerHtml', () => {
     const sdf = 'line one\nline "two"\nline\\three';
     const html = buildProteinViewerHtml('/* fake */', sdf);
 
-    // What's embedded must be the JSON-escaped form, not the raw text
-    // (which would break out of the JS string or contain literal newlines
-    // inside a single-quoted-looking context).
     expect(html).toContain(JSON.stringify(sdf));
     expect(html).not.toContain('line "two"\nline');
   });
@@ -168,29 +165,70 @@ describe('buildProteinViewerHtml', () => {
     expect(html).toContain('viewer.center({ serial: atom.serial },');
   });
 
-  it('exposes a measure-mode toggle that resets pending picks and clears drawn artifacts', () => {
+  it('exposes a measure-mode setter that accepts off/distance/angle and clears drawn artifacts on change', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
-    expect(html).toContain('window.__setMeasureModeEnabled = function (enabled)');
-    expect(html).toContain('measureModeEnabled = !!enabled');
+    expect(html).toContain('window.__setMeasureMode = function (mode)');
+    expect(html).toContain("measureMode = mode === 'angle' || mode === 'distance' ? mode : 'off'");
     expect(html).toContain('clearMeasurementArtifacts()');
-    expect(html).toContain("post({ type: 'measureModeChanged', enabled: measureModeEnabled })");
+    expect(html).toContain("post({ type: 'measureModeChanged', mode: measureMode })");
   });
 
-  it('in measure mode, the first atom tap picks a point and the second draws a line and posts the distance', () => {
+  it('in distance mode, the first atom tap picks a point and the second draws a line and posts the distance', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
-    expect(html).toContain("post({ type: 'measurePointSelected', element: atom.elem })");
+    expect(html).toContain("type: 'measurePointSelected'");
     expect(html).toContain('viewer.addLine({');
-    expect(html).toContain("type: 'measurementResult'");
+    expect(html).toContain("kind: 'distance'");
     expect(html).toContain('fromElement: first.elem');
     expect(html).toContain('toElement: atom.elem');
   });
 
-  it('tapping the same pending atom again in measure mode cancels the pick instead of measuring against itself', () => {
+  it('in angle mode, three atom taps (vertex second) draw two lines and post the angle in degrees', () => {
     const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
-    expect(html).toContain('if (measurePendingSerial === atom.serial)');
-    const cancelBranchMatch = html.match(/if \(measurePendingSerial === atom\.serial\) \{[\s\S]*?\n {8}\}/);
+    expect(html).toContain('function angleBetween(a, vertex, c)');
+    expect(html).toContain('Math.acos');
+    expect(html).toContain("kind: 'angle'");
+    expect(html).toContain('elementA: a.elem');
+    expect(html).toContain('elementB: vertex.elem');
+    expect(html).toContain('elementC: c.elem');
+    expect(html).toContain("function requiredPointsFor(mode) {\n      return mode === 'angle' ? 3 : 2;\n    }");
+  });
+
+  it('tapping the most recently picked atom again in measure mode cancels the whole in-progress measurement', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('lastPoint.serial === atom.serial');
+    const cancelBranchMatch = html.match(/if \(lastPoint && lastPoint\.serial === atom\.serial\) \{[\s\S]*?\n {10}\}/);
     expect(cancelBranchMatch).not.toBeNull();
+    expect(cancelBranchMatch?.[0]).toContain('clearMeasurementArtifacts()');
     expect(cancelBranchMatch?.[0]).toContain("post({ type: 'measureCleared' })");
+  });
+
+  it('registers an invisible, wider-than-visible pickable cylinder per bond that posts a bondClick message', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('function addBondClickTargets()');
+    expect(html).toContain('addBondClickTargets();');
+    expect(html).toContain('viewer.addCylinder({');
+    expect(html).toContain('opacity: 0.0');
+    expect(html).toContain('clickable: true');
+    expect(html).toContain("type: 'bondClick'");
+    expect(html).toContain('elementA: a.elem');
+    expect(html).toContain('elementB: n.elem');
+  });
+
+  it('dedupes bonds by only building a click target from the lower-index atom toward the higher-index neighbor', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('if (neighborIndex <= atom.index) {\n            continue;\n          }');
+  });
+
+  it('bond taps are ignored while a measurement is in progress, so they cannot be mistaken for measurement picks', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    const callbackMatch = html.match(/callback: function \(\) \{[\s\S]*?\n {14}\},/);
+    expect(callbackMatch).not.toBeNull();
+    expect(callbackMatch?.[0]).toContain("if (measureMode !== 'off')");
+  });
+
+  it('enables ambient occlusion on viewer creation for depth perception instead of flat-looking spheres', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('ambientOcclusion: { strength:');
   });
 
   it('defaults to ball-and-stick with labels hidden when no options are given', () => {
@@ -223,5 +261,57 @@ describe('buildProteinViewerHtml', () => {
     const toggleFnMatch = html.match(/window\.__setAtomLabelsVisible = function \(visible\) \{[\s\S]*?\n {4}\};/);
     expect(toggleFnMatch).not.toBeNull();
     expect(toggleFnMatch?.[0]).toMatch(/try\s*{[\s\S]*catch/);
+  });
+
+  it('exposes a window.__clearSelection function for React Native to revert the highlighted atom on demand', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    const clearFnMatch = html.match(/window\.__clearSelection = function \(\) \{[\s\S]*?\n {4}\};/);
+    expect(clearFnMatch).not.toBeNull();
+    expect(clearFnMatch?.[0]).toContain('clearSelection();');
+    expect(clearFnMatch?.[0]).toContain('viewer.render();');
+    expect(clearFnMatch?.[0]).toMatch(/try\s*{[\s\S]*catch/);
+  });
+
+  it('renders full sphere quality by default when no atom count is given', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('sphereQuality: 2');
+    expect(html).not.toContain('sphereQuality: 1');
+  });
+
+  it('renders full sphere quality for a small molecule', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF', { atomCount: 50 });
+    expect(html).toContain('sphereQuality: 2');
+    expect(html).not.toContain('sphereQuality: 1');
+  });
+
+  it('drops to reduced sphere quality (a real LOD lever) once atom count crosses the large-molecule threshold', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF', { atomCount: 5000 });
+    expect(html).toContain('sphereQuality: 1');
+    expect(html).not.toContain('sphereQuality: 2');
+  });
+
+  it('applies the same sphere quality to both the ball-and-stick and space-filling styles', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF', { atomCount: 5000 });
+    const ballAndStickMatch = html.match(/ballAndStick:\s*\{[\s\S]*?\},\s*\n\s*spaceFilling/);
+    const spaceFillingMatch = html.match(/spaceFilling:\s*\{[\s\S]*?\},/);
+    expect(ballAndStickMatch?.[0]).toContain('sphereQuality: 1');
+    expect(spaceFillingMatch?.[0]).toContain('sphereQuality: 1');
+  });
+
+  it('continuously measures real rendered frame rate via requestAnimationFrame and drops ambient occlusion once it sustains below the target', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('function sampleFrame(timestamp)');
+    expect(html).toContain('requestAnimationFrame(sampleFrame)');
+    const downgradeBranchMatch = html.match(/if \(fps < \d+\) \{[\s\S]*?\n {10}\}/);
+    expect(downgradeBranchMatch).not.toBeNull();
+    expect(downgradeBranchMatch?.[0]).toContain("viewer.setViewStyle({ style: '' })");
+    expect(downgradeBranchMatch?.[0]).toContain("post({ type: 'performanceDowngraded', fps: fps })");
+  });
+
+  it('only downgrades performance once, not on every subsequent low-FPS frame', () => {
+    const html = buildProteinViewerHtml('/* fake */', 'DUMMY_SDF');
+    expect(html).toContain('var qualityDowngraded = false;');
+    expect(html).toContain('!qualityDowngraded');
+    expect(html).toContain('qualityDowngraded = true;');
   });
 });

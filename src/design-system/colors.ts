@@ -1,9 +1,3 @@
-/**
- * Palette extracted from the Swifty Protein UI mockups (auth, ligand list,
- * 3D viewer screens). The mockups are dark-only today, so `darkTheme` is the
- * single implemented palette; `ColorTheme` exists so a `lightTheme` can be
- * added later without touching consumers.
- */
 export interface ColorTheme {
   background: string;
   surface: string;
@@ -34,4 +28,20 @@ export const darkTheme: ColorTheme = {
   accent: '#35C7A0',
   onAccent: '#04342C',
   danger: '#F09595',
+};
+
+export const lightTheme: ColorTheme = {
+  background: '#F5F6F8',
+  surface: '#FFFFFF',
+  surfaceRaised: '#FFFFFF',
+  border: '#DDE1E6',
+  borderStrong: '#C7CCD4',
+  divider: '#E7EAEE',
+  textPrimary: '#12151A',
+  textSecondary: '#2B303A',
+  textTertiary: '#5B6472',
+  textQuaternary: '#7A8492',
+  accent: '#0E9C79',
+  onAccent: '#FFFFFF',
+  danger: '#C4453F',
 };

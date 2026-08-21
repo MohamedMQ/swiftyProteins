@@ -12,7 +12,6 @@ export const AVATAR_PALETTE: AvatarColor[] = [
   { background: '#2E2352', foreground: '#CECBF6' },
 ];
 
-/** Deterministic per-code color so a row's avatar stays stable across renders/scrolls. */
 export function getAvatarColor(seed: string): AvatarColor {
   return AVATAR_PALETTE[hashString(seed) % AVATAR_PALETTE.length];
 }

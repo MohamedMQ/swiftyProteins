@@ -14,24 +14,11 @@ function formatCoordinate(value: number): string {
   return padLeft(value.toFixed(4), 10);
 }
 
-/**
- * Serializes a parsed Molecule into an MDL Molfile (SDF V2000) — a format
- * 3Dmol.js natively supports and understands, unlike its CIF parser (which
- * only reads full crystallographic _atom_site.* structures, not the
- * _chem_comp_atom/_chem_comp_bond ligand-definition format RCSB actually
- * serves). We keep parsing our own .cif per the subject's requirement and
- * only convert to SDF at the last step, purely to hand the already-parsed
- * geometry to the renderer in a format it understands.
- */
+
 export function moleculeToSdf(molecule: Molecule, name = ''): string {
   const atomIndexById = new Map<string, number>();
   molecule.atoms.forEach((atom, index) => atomIndexById.set(atom.id, index + 1));
 
-  // Resolve bond lines before writing the counts line — the count declared
-  // there must match the number of bond lines actually written, or any
-  // strict V2000 reader (3Dmol.js included) will misparse the rest of the
-  // file. A bond referencing a missing atom can't be written, so it must
-  // be excluded from the count too, not just skipped later.
   const bondLines: string[] = [];
   for (const bond of molecule.bonds) {
     const indexA = atomIndexById.get(bond.atomIdA);

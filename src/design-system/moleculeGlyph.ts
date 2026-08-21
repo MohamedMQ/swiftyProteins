@@ -27,13 +27,6 @@ const CENTER = SIZE / 2;
 export const MOLECULE_GLYPH_HUB_COLOR = '#35C7A0';
 export const MOLECULE_GLYPH_BOND_COLOR = '#39414D';
 
-/**
- * A tiny procedural ball-and-stick glyph per ligand code — deterministic
- * (same code always renders the same shape) but varied in node count,
- * angle, size, and color, so a scrolling list of 1000+ rows doesn't read as
- * one icon copy-pasted over and over. Echoes the same visual language as
- * the app icon and splash screen instead of a generic initials chip.
- */
 export function getMoleculeGlyph(seed: string): MoleculeGlyph {
   const random = createSeededRandom(hashString(seed));
   const nodeCount = random() < 0.5 ? 2 : 3;

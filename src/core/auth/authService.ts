@@ -1,19 +1,13 @@
-import { hashPassword, verifyPassword, type PasswordHash } from '../security/passwordHashing';
+import { hashPassword, PBKDF2_ITERATIONS, verifyPassword, type PasswordHash } from '../security/passwordHashing';
 import { getSecureJSON, setSecureJSON } from '../security/secureStore';
 import { validatePassword, validateUsername } from './validation';
 
 const USERS_KEY = 'auth.users';
-// Not a secret — just remembers which local account biometric login should
-// unlock, since a fingerprint/face scan alone can't tell us *who*, only
-// that it's the device owner.
 const LAST_USERNAME_KEY = 'auth.lastUsername';
 
-// Used when the username doesn't exist, so verifyPassword still pays its
-// full PBKDF2 cost — otherwise a missing user would return faster than a
-// wrong password and leak which usernames are registered via timing.
 const DUMMY_PASSWORD_HASH: PasswordHash = {
   algorithm: 'PBKDF2-HMAC-SHA256',
-  iterations: 210_000,
+  iterations: PBKDF2_ITERATIONS,
   saltHex: '00'.repeat(16),
   hashHex: '00'.repeat(32),
 };
@@ -86,12 +80,6 @@ export async function loginUser(username: string, password: string): Promise<Aut
   return { success: true, username: stored.username };
 }
 
-/**
- * A biometric scan only proves device ownership, not which account to use,
- * so this logs back in as whichever account last authenticated successfully
- * on this device — the same single-user assumption most personal apps make
- * for biometric unlock.
- */
 export async function loginWithBiometrics(): Promise<AuthResult> {
   const lastUsername = await getLastAuthenticatedUsername();
   const users = await loadUsers();

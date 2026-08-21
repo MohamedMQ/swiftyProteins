@@ -7,10 +7,6 @@ export interface Vec3 {
   z: number;
 }
 
-/**
- * Intermediate parse result — position can still be null here. Molecule
- * assembly filters these down to the final Atom type (always positioned).
- */
 export interface ParsedAtom {
   id: string;
   element: string;
@@ -25,13 +21,6 @@ export function parseAtoms(atomTable: CifCategoryTable): ParsedAtom[] {
   }));
 }
 
-/**
- * model_Cartn_* (experimental coordinates) is preferred, but some entries —
- * e.g. UNK, used for unmodeled residues — have `?` there for atoms that
- * were never actually observed in a structure. pdbx_model_Cartn_*_ideal
- * (Corina-computed) is the fallback; if that's missing too, the atom has
- * no usable position at all.
- */
 function resolveAtomPosition(row: Record<string, string>): Vec3 | null {
   const model = readVec3(row, 'model_Cartn_x', 'model_Cartn_y', 'model_Cartn_z');
   if (model !== null) {

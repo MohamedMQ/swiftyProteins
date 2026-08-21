@@ -1,9 +1,3 @@
-/**
- * Display-only element data for the atom info popup — name, atomic number,
- * and an accent color for the popup's indicator dot. Rendering itself uses
- * 3Dmol.js's built-in Jmol color scheme; this is a separate, smaller table
- * for informational UI, not the 3D view.
- */
 interface ElementInfo {
   name: string;
   atomicNumber: number;

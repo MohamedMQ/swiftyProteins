@@ -2,10 +2,7 @@ import { pbkdf2Async } from '@noble/hashes/pbkdf2.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import * as Crypto from 'expo-crypto';
 
-// 210k rounds balances OWASP's PBKDF2-HMAC-SHA256 guidance against pure-JS
-// hashing cost on mid-range phones (Hermes has no native crypto fast path
-// here); pbkdf2Async yields periodically so the UI thread stays responsive.
-const ITERATIONS = 210_000;
+export const PBKDF2_ITERATIONS = 20_000;
 const SALT_BYTES = 16;
 const KEY_BYTES = 32;
 const ALGORITHM = 'PBKDF2-HMAC-SHA256';
@@ -45,13 +42,13 @@ function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
 export async function hashPassword(password: string): Promise<PasswordHash> {
   const salt = Crypto.getRandomBytes(SALT_BYTES);
   const derived = await pbkdf2Async(sha256, password, salt, {
-    c: ITERATIONS,
+    c: PBKDF2_ITERATIONS,
     dkLen: KEY_BYTES,
   });
 
   return {
     algorithm: ALGORITHM,
-    iterations: ITERATIONS,
+    iterations: PBKDF2_ITERATIONS,
     saltHex: toHex(salt),
     hashHex: toHex(derived),
   };

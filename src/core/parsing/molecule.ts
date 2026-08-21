@@ -22,12 +22,6 @@ export class CifParseError extends Error {
   }
 }
 
-/**
- * Atoms that couldn't be placed (no model or ideal coordinates) are
- * dropped rather than failing the whole molecule — and any bond touching a
- * dropped atom is dropped with it, since it can't be drawn without both
- * endpoints. Only a file with no usable atoms at all is a hard failure.
- */
 export function parseMolecule(rawCif: string): Molecule {
   const lines = stripCifTextBlocks(rawCif);
   const atomTable = extractCifCategory(lines, 'chem_comp_atom');
@@ -56,7 +50,6 @@ export function parseMolecule(rawCif: string): Molecule {
   };
 }
 
-/** Hill notation: carbon first, then hydrogen, then the rest alphabetically (all alphabetical if no carbon). */
 export function computeMolecularFormula(atoms: Atom[]): string {
   const counts = new Map<string, number>();
   for (const atom of atoms) {
